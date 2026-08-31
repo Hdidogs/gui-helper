@@ -1,4 +1,4 @@
-package fr.hdi.gui.gui.utils;
+package fr.hdi.gui.utils;
 
 import net.minecraft.util.Identifier;
 

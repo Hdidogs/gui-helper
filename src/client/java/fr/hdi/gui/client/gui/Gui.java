@@ -1,10 +1,10 @@
-package fr.hdi.gui.gui;
+package fr.hdi.gui.client.gui;
 
-import fr.hdi.gui.gui.objects.GuiObject;
-import fr.hdi.gui.gui.utils.GuiAllign;
-import fr.hdi.gui.gui.utils.Texture;
+import fr.hdi.gui.client.gui.objects.GuiObject;
+import fr.hdi.gui.client.gui.utils.GuiAllign;
+import fr.hdi.gui.client.gui.utils.ObjectRegisterType;
+import fr.hdi.gui.utils.Texture;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +27,18 @@ public class Gui {
         blur = true;
         shouldPause = false;
         shouldCloseOnEsc = true;
+    }
+
+    public List<GuiObject> getObjectsInitRegisterType() {
+        return getObjectsByRegisterType(ObjectRegisterType.INIT);
+    }
+
+    public List<GuiObject> getObjectsRenderRegisterType() {
+        return getObjectsByRegisterType(ObjectRegisterType.RENDER);
+    }
+
+    public List<GuiObject> getObjectsByRegisterType(ObjectRegisterType type) {
+        return objects.stream().filter(guiObject -> guiObject.getObjectRegisterType() == type).toList();
     }
 
     public boolean hasBackground() {
@@ -62,9 +74,19 @@ public class Gui {
         return blur;
     }
 
-    public Gui setBlur(boolean blur) {
-        this.blur = blur;
+    public Gui activeBlur() {
+        this.blur = true;
         return this;
+    }
+
+    public Gui addObject(GuiObject object) {
+        objects.add(object);
+
+        return this;
+    }
+
+    public GuiAllign getAllign() {
+        return allign;
     }
 
     public boolean isDarkBackground() {

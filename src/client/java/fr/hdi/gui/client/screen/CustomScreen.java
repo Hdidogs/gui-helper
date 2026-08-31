@@ -1,6 +1,7 @@
 package fr.hdi.gui.client.screen;
 
-import fr.hdi.gui.gui.Gui;
+import fr.hdi.gui.client.gui.Gui;
+import fr.hdi.gui.client.gui.objects.GuiObject;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 
@@ -20,6 +21,10 @@ public class CustomScreen extends Screen {
 
         this.bgX = (this.width - gui.getBackground().getDrawSizeX()) / 2;
         this.bgY = (this.height - gui.getBackground().getDrawSizeY()) / 2;
+
+        for (GuiObject object : gui.getObjectsInitRegisterType()) {
+            this.addDrawable(object.register(this.bgX, this.bgY));
+        }
     }
 
     @Override
@@ -27,6 +32,10 @@ public class CustomScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
 
         if (gui.hasBackground()) context.drawTexture(gui.getBackground().getTexture(), this.bgX, this.bgY, gui.getBackground().getDrawStartX(), gui.getBackground().getDrawStartY(), gui.getBackground().getDrawSizeX(), gui.getBackground().getDrawSizeY(), gui.getBackground().getTextureSizeX(), gui.getBackground().getTextureSizeY());
+
+        for (GuiObject object : gui.getObjectsRenderRegisterType()) {
+            this.addDrawable(object.register(this.bgX, this.bgY));
+        }
     }
 
     @Override
