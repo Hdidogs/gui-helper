@@ -31,6 +31,10 @@ public class TextWithDetail {
         this.textSize = 1;
     }
 
+    public void setText(Text text) {
+        this.text = text;
+    }
+
     public void setColor(Color color) {
         this.color = color;
     }

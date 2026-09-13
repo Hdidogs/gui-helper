@@ -1,41 +1,83 @@
 package fr.hdi.gui.client.screen;
 
 import fr.hdi.gui.client.gui.Gui;
-import fr.hdi.gui.client.gui.objects.GuiObject;
 import net.minecraft.client.gui.DrawContext;
+import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.gui.screen.Screen;
 
 public class CustomScreen extends Screen {
     private Gui gui;
-    private int bgX;
-    private int bgY;
+    private GuiRenderer renderer;
 
     public CustomScreen(Gui gui) {
         super(gui.getTitle());
         this.gui = gui;
+        this.renderer = new GuiRenderer(gui);
+    }
+
+    public GuiRenderer getRenderer() {
+        return renderer;
     }
 
     @Override
     protected void init() {
         super.init();
 
-        this.bgX = (this.width - gui.getBackground().getDrawSizeX()) / 2;
-        this.bgY = (this.height - gui.getBackground().getDrawSizeY()) / 2;
-
-        for (GuiObject object : gui.getObjectsInitRegisterType()) {
-            this.addDrawable(object.register(this.bgX, this.bgY));
-        }
+        renderer.init(this.width, this.height, this::addDrawableChild);
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
+        renderer.syncVisibility();
+        renderer.pushScale(context);
 
-        if (gui.hasBackground()) context.drawTexture(gui.getBackground().getTexture(), this.bgX, this.bgY, gui.getBackground().getDrawStartX(), gui.getBackground().getDrawStartY(), gui.getBackground().getDrawSizeX(), gui.getBackground().getDrawSizeY(), gui.getBackground().getTextureSizeX(), gui.getBackground().getTextureSizeY());
+        super.render(context, renderer.scaled(mouseX), renderer.scaled(mouseY), delta);
 
-        for (GuiObject object : gui.getObjectsRenderRegisterType()) {
-            this.addDrawable(object.register(this.bgX, this.bgY));
+        if (renderer.isOverlayCapturing()) this.clearTooltip();
+
+        renderer.renderOverlays(context, mouseX, mouseY, delta);
+
+        renderer.popScale(context);
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        super.mouseMoved(renderer.scaled(mouseX), renderer.scaled(mouseY));
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (renderer.mouseClickedOverlay(mouseX, mouseY, button)) return true;
+
+        return super.mouseClicked(renderer.scaled(mouseX), renderer.scaled(mouseY), button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return super.mouseReleased(renderer.scaled(mouseX), renderer.scaled(mouseY), button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        return super.mouseDragged(renderer.scaled(mouseX), renderer.scaled(mouseY), button, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (renderer.mouseScrolledOverlay(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+
+        return super.mouseScrolled(renderer.scaled(mouseX), renderer.scaled(mouseY), horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && renderer.isOverlayCapturing()) {
+            renderer.closeOverlays();
+
+            return true;
         }
+
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -47,6 +89,8 @@ public class CustomScreen extends Screen {
 
         if (gui.isBlur()) this.applyBlur(delta);
         if (gui.isDarkBackground()) this.renderDarkening(context);
+
+        renderer.drawBackground(context);
     }
 
     @Override

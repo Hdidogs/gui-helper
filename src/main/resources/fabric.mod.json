@@ -3,14 +3,10 @@
 	"id": "gui-helper",
 	"version": "${version}",
 	"name": "Gui Helper",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A framework for building Minecraft GUIs from a single Gui object holding every object and its data.",
 	"authors": [
-		"Me!"
+		"Hdido"
 	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
 	"license": "CC0-1.0",
 	"icon": "assets/gui-helper/icon.png",
 	"environment": "*",
@@ -22,13 +18,6 @@
 			"fr.hdi.gui.client.GuiHelperClient"
 		]
 	},
-	"mixins": [
-		"gui-helper.mixins.json",
-		{
-			"config": "gui-helper.client.mixins.json",
-			"environment": "client"
-		}
-	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
 		"minecraft": "~1.20.6",
