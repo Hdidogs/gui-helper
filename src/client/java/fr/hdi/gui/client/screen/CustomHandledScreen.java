@@ -64,7 +64,12 @@ public class CustomHandledScreen extends HandledScreen<CustomScreenHandler> {
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
         if (gui.isBlur()) this.applyBlur(delta);
-        if (gui.isDarkBackground()) this.renderDarkening(context);
+
+        if (gui.isDarkBackground()) {
+            renderer.pushUnscaled(context);
+            this.renderDarkening(context);
+            renderer.popScale(context);
+        }
 
         this.drawBackground(context, delta, mouseX, mouseY);
     }

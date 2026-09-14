@@ -8,6 +8,7 @@ public enum ObjectType {
     BUTTON,
     DROPDOWN,
     TEXT_FIELD,
+    TEXT_AREA,
     ITEM_RENDER,
     RADIO_BUTTON,
     TEXTURE

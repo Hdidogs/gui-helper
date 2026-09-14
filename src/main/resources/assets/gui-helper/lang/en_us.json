@@ -1,0 +1,8 @@
+{
+  "gui-helper.debug.handler.title": "Debug Handler",
+  "gui-helper.debug.page.input": "Input",
+  "gui-helper.debug.page.trade": "Trade",
+  "gui-helper.debug.notes": "Notes",
+  "gui-helper.debug.built_line": "Built line %s",
+  "gui-helper.debug.enter": "Enter"
+}

@@ -13,10 +13,13 @@ public class GuiRenderer {
     private Gui gui;
     private int guiX;
     private int guiY;
+    private float sizeMultiplicator;
 
     public GuiRenderer(Gui gui) {
         this.gui = gui;
+        this.sizeMultiplicator = gui.getSizeMultiplicator();
 
+        gui.build();
         gui.resetState();
     }
 
@@ -33,16 +36,30 @@ public class GuiRenderer {
     }
 
     public float getSizeMultiplicator() {
-        return gui.getSizeMultiplicator();
+        return sizeMultiplicator;
     }
 
     public int scaled(double value) {
-        return (int) (value / gui.getSizeMultiplicator());
+        return (int) (value / sizeMultiplicator);
+    }
+
+    private float computeSizeMultiplicator(int screenWidth, int screenHeight) {
+        if (!gui.isFitToWindow()) return gui.getSizeMultiplicator();
+
+        int sizeX = gui.getSizeX();
+        int sizeY = gui.getSizeY();
+
+        if (sizeX <= 0 || sizeY <= 0) return gui.getSizeMultiplicator();
+
+        float fit = Math.min(screenWidth * gui.getFillRatio() / sizeX, screenHeight * gui.getFillRatio() / sizeY);
+
+        return Math.max(0.1F, Math.min(fit, gui.getMaxSizeMultiplicator()));
     }
 
     public void init(int screenWidth, int screenHeight, Consumer<ClickableWidget> adder) {
-        this.guiX = (int) (screenWidth / gui.getSizeMultiplicator() - gui.getSizeX()) / 2;
-        this.guiY = (int) (screenHeight / gui.getSizeMultiplicator() - gui.getSizeY()) / 2;
+        this.sizeMultiplicator = computeSizeMultiplicator(screenWidth, screenHeight);
+        this.guiX = (int) (screenWidth / sizeMultiplicator - gui.getSizeX()) / 2;
+        this.guiY = (int) (screenHeight / sizeMultiplicator - gui.getSizeY()) / 2;
 
         for (GuiObject object : gui.getObjects()) {
             adder.accept(object.register(this.guiX, this.guiY));
@@ -97,7 +114,14 @@ public class GuiRenderer {
 
     public void pushScale(DrawContext context) {
         context.getMatrices().push();
-        context.getMatrices().scale(gui.getSizeMultiplicator(), gui.getSizeMultiplicator(), 1.0F);
+        context.getMatrices().scale(sizeMultiplicator, sizeMultiplicator, 1.0F);
+    }
+
+    public void pushUnscaled(DrawContext context) {
+        float inverse = 1.0F / sizeMultiplicator;
+
+        context.getMatrices().push();
+        context.getMatrices().scale(inverse, inverse, 1.0F);
     }
 
     public void popScale(DrawContext context) {

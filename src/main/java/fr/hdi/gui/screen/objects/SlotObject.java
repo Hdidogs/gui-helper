@@ -9,6 +9,7 @@ public class SlotObject {
     private int objectStartY;
     private Identifier backgroundSprite;
     private boolean locked;
+    private String group;
     private SlotClickHandler onClick;
 
     public SlotObject(String id, int index, int objectStartX, int objectStartY) {
@@ -45,6 +46,20 @@ public class SlotObject {
 
     public boolean hasBackgroundSprite() {
         return backgroundSprite != null;
+    }
+
+    public String getGroup() {
+        return group;
+    }
+
+    public SlotObject setGroup(String group) {
+        this.group = group == null || group.isEmpty() ? null : group;
+
+        return this;
+    }
+
+    public boolean hasGroup() {
+        return group != null;
     }
 
     public boolean isLocked() {

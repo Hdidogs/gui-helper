@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class Gui {
     private Identifier id;
@@ -21,6 +22,12 @@ public class Gui {
     private int sizeX;
     private int sizeY;
     private float sizeMultiplicator;
+    private boolean fitToWindow;
+    private float fillRatio;
+    private float maxSizeMultiplicator;
+    private Consumer<Gui> builder;
+    private List<BuiltObject> builtObjects = new ArrayList<>();
+    private boolean building;
     private boolean shouldPause;
     private boolean shouldCloseOnEsc;
     private boolean blur;
@@ -32,6 +39,11 @@ public class Gui {
         shouldPause = false;
         shouldCloseOnEsc = true;
         sizeMultiplicator = 1.0F;
+        fillRatio = 1.0F;
+        maxSizeMultiplicator = 4.0F;
+    }
+
+    private record BuiltObject(List<GuiObject> owner, GuiObject object) {
     }
 
     public float getSizeMultiplicator() {
@@ -42,6 +54,67 @@ public class Gui {
         this.sizeMultiplicator = Math.max(0.1F, sizeMultiplicator);
 
         return this;
+    }
+
+    public boolean isFitToWindow() {
+        return fitToWindow;
+    }
+
+    public Gui setFitToWindow(boolean fitToWindow) {
+        this.fitToWindow = fitToWindow;
+
+        return this;
+    }
+
+    public float getFillRatio() {
+        return fillRatio;
+    }
+
+    public Gui setFillRatio(float fillRatio) {
+        this.fillRatio = Math.min(1.0F, Math.max(0.1F, fillRatio));
+
+        return this;
+    }
+
+    public float getMaxSizeMultiplicator() {
+        return maxSizeMultiplicator;
+    }
+
+    public Gui setMaxSizeMultiplicator(float maxSizeMultiplicator) {
+        this.maxSizeMultiplicator = Math.max(0.1F, maxSizeMultiplicator);
+
+        return this;
+    }
+
+    public Consumer<Gui> getBuilder() {
+        return builder;
+    }
+
+    public boolean hasBuilder() {
+        return builder != null;
+    }
+
+    public Gui setBuilder(Consumer<Gui> builder) {
+        this.builder = builder;
+
+        return this;
+    }
+
+    public void build() {
+        if (builder == null) return;
+
+        for (BuiltObject built : builtObjects) built.owner().remove(built.object());
+
+        builtObjects.clear();
+        building = true;
+
+        try {
+            builder.accept(this);
+        } finally {
+            building = false;
+        }
+
+        validateIds();
     }
 
     public List<GuiObject> getObjects() {
@@ -191,6 +264,18 @@ public class Gui {
 
     public Gui addObject(GuiObject object) {
         objects.add(object);
+
+        if (building) builtObjects.add(new BuiltObject(objects, object));
+
+        validateIds();
+
+        return this;
+    }
+
+    public Gui addObject(BoxObject parent, GuiObject object) {
+        parent.addObject(object);
+
+        if (building) builtObjects.add(new BuiltObject(parent.getObjects(), object));
 
         validateIds();
 

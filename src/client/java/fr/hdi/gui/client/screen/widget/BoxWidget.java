@@ -8,8 +8,6 @@ import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.ContainerWidget;
 import net.minecraft.text.Text;
-import org.joml.Matrix4f;
-import org.joml.Vector4f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,11 +76,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
         UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
-        Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
-        Vector4f start = matrix.transform(new Vector4f(getX(), getY(), 0.0F, 1.0F));
-        Vector4f end = matrix.transform(new Vector4f(getX() + width, getY() + height, 0.0F, 1.0F));
-
-        context.enableScissor((int) start.x, (int) start.y, (int) end.x, (int) end.y);
+        UtilsWidgets.enableScissor(context, getX(), getY(), getX() + width, getY() + height);
         context.getMatrices().push();
         context.getMatrices().translate(0.0F, (float) -getScrollY(), 0.0F);
 

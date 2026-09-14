@@ -11,8 +11,18 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
+import org.joml.Matrix4f;
+import org.joml.Vector4f;
 
 public class UtilsWidgets {
+    public static void enableScissor(DrawContext context, int startX, int startY, int endX, int endY) {
+        Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
+        Vector4f start = matrix.transform(new Vector4f(startX, startY, 0.0F, 1.0F));
+        Vector4f end = matrix.transform(new Vector4f(endX, endY, 0.0F, 1.0F));
+
+        context.enableScissor((int) start.x, (int) start.y, (int) end.x, (int) end.y);
+    }
+
     public static void drawTexture(DrawContext context, Texture texture, int x, int y, int sizeX, int sizeY) {
         drawTexture(context, texture, x, y, sizeX, sizeY, 1.0F);
     }

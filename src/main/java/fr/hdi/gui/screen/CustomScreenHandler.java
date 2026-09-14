@@ -4,9 +4,7 @@ import fr.hdi.gui.GuiHelper;
 import fr.hdi.gui.network.GuiOpenData;
 import fr.hdi.gui.screen.objects.SlotObject;
 import fr.hdi.gui.utils.GuiData;
-import fr.hdi.gui.screen.utils.LockedSlot;
-import fr.hdi.gui.screen.utils.LockedTexturedSlot;
-import fr.hdi.gui.screen.utils.TexturedSlot;
+import fr.hdi.gui.screen.utils.GuiSlot;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -21,11 +19,14 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Identifier;
 
 public class CustomScreenHandler extends ScreenHandler {
+    public static final String GROUP_KEY = "gui.group";
+
     public static ExtendedScreenHandlerType<CustomScreenHandler, GuiOpenData> TYPE;
 
     private GuiHandler guiHandler;
     private GuiData data;
     private Inventory inventory;
+    private String activeGroup;
 
     public static void register() {
         TYPE = Registry.register(Registries.SCREEN_HANDLER, GuiHelper.id("handler"),
@@ -45,8 +46,9 @@ public class CustomScreenHandler extends ScreenHandler {
         if (guiHandler == null) throw new IllegalStateException("No gui handler registered for " + open.gui());
 
         this.inventory = inventory != null ? inventory : new SimpleInventory(guiHandler.getInventorySize());
+        this.activeGroup = normalizeGroup(data.getString(GROUP_KEY, guiHandler.getDefaultGroup()));
 
-        for (SlotObject slot : guiHandler.getSlots()) addSlot(createSlot(slot));
+        for (SlotObject slot : guiHandler.getSlots()) addSlot(new GuiSlot(this, slot, this.inventory));
 
         if (guiHandler.hasPlayerInventory()) addPlayerInventory(playerInventory, guiHandler.getPlayerInventoryX(), guiHandler.getPlayerInventoryY());
 
@@ -75,20 +77,20 @@ public class CustomScreenHandler extends ScreenHandler {
         return guiHandler.getSlots().get(slotIndex);
     }
 
-    private Slot createSlot(SlotObject object) {
-        if (object.hasBackgroundSprite()) {
-            if (object.isLocked()) {
-                return new LockedTexturedSlot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY(), object.getBackgroundSprite());
-            }
+    public String getActiveGroup() {
+        return activeGroup;
+    }
 
-            return new TexturedSlot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY(), object.getBackgroundSprite());
-        }
+    public void setActiveGroup(String group) {
+        this.activeGroup = normalizeGroup(group);
+    }
 
-        if (object.isLocked()) {
-            return new LockedSlot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY());
-        }
+    public boolean isGroupActive(String group) {
+        return group == null || group.equals(activeGroup);
+    }
 
-        return new Slot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY());
+    private static String normalizeGroup(String group) {
+        return group == null || group.isEmpty() ? null : group;
     }
 
     private void addPlayerInventory(PlayerInventory playerInventory, int x, int y) {
@@ -107,6 +109,8 @@ public class CustomScreenHandler extends ScreenHandler {
     @Override
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
         SlotObject object = getSlotObject(slotIndex);
+
+        if (object != null && !isGroupActive(object.getGroup())) return;
 
         if (object != null && object.hasOnClick()) {
             if (!player.getWorld().isClient) object.getOnClick().onClick(this, player, button, actionType);

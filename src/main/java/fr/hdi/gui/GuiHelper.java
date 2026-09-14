@@ -47,8 +47,10 @@ public class GuiHelper implements ModInitializer {
 
     public void registerTestGui() {
         GuiHandlerRegistry.register(id("debug_handler"), new GuiHandler()
-                .setTitle(Text.literal("Debug Handler"))
-                .addSlotGrid("input", 0, 111, 20, 3, 1)
+                .setTitle(Text.translatable("gui-helper.debug.handler.title"))
+                .addSlotGrid("input", 0, 111, 20, 3, 1).group("input")
+                .addSlotGrid("trade", 3, 111, 20, 3, 2).group("trade")
+                .setDefaultGroup("input")
                 .setPlayerInventory(8, 83));
 
         GuiValuesRegistry.register(id("debug_handler"), (player, values) -> {

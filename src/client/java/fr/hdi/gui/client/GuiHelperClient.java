@@ -3,6 +3,7 @@ package fr.hdi.gui.client;
 import fr.hdi.gui.GuiHelper;
 import fr.hdi.gui.client.gui.objects.*;
 import fr.hdi.gui.client.gui.Gui;
+import fr.hdi.gui.client.gui.GuiPages;
 import fr.hdi.gui.client.gui.GuiRegistry;
 import fr.hdi.gui.utils.*;
 import fr.hdi.gui.network.GuiValuesPayload;
@@ -46,6 +47,9 @@ public class GuiHelperClient implements ClientModInitializer {
                 this.close();
             });
             TextFieldObject textField = new TextFieldObject("name", text_field, new TextWithDetail(Text.literal("test")), 5, 147, 88, 13, 25);
+            TextAreaObject textArea = new TextAreaObject("notes", text_field, null, 110, 60, 60, 50, 256);
+
+            textArea.setLabel(new TextWithDetail(Text.translatable("gui-helper.debug.notes"), 0.5f));
             TextObject textObject = new TextObject("title", new TextWithDetail(Text.literal("textField::getValue"), ColorHelper.RED, 0.5f), 45, 61);
             ItemRenderObject itemRender = new ItemRenderObject("redstone", Items.REDSTONE, 40, 61, 0.5f).setShowItemTooltip(true);
             ToggleObject toggleObject = new ToggleObject("sound", Textures.TEXTURE_TOGGLE_OFF, Textures.TEXTURE_TOGGLE_ON, 145, 27, 25, 13);
@@ -85,7 +89,16 @@ public class GuiHelperClient implements ClientModInitializer {
 
             dropdown.setLabel(new TextWithDetail(Text.literal("Difficulty"), 0.5f));
 
-            gui.addObject(dropdown).addObject(button).addObject(textField).addObject(textObject).addObject(itemRender).addObject(toggleObject).addObject(box);
+            gui.addObject(dropdown).addObject(button).addObject(textField).addObject(textArea).addObject(textObject).addObject(itemRender).addObject(toggleObject).addObject(box);
+
+            gui.setBuilder(built -> {
+                BoxObject list = built.getObject("list", BoxObject.class);
+                int lines = built.getData().getInt("lines", 3);
+
+                for (int index = 0; index < lines; index++) {
+                    built.addObject(list, new TextObject("built_" + index, new TextWithDetail(Text.translatable("gui-helper.debug.built_line", index), ColorHelper.WHITE, 0.5f), 2, 100 + index * 10));
+                }
+            });
 
             GuiRegistry.register(GuiHelper.id("debug"), gui);
             GuiRegistry.register(GuiHelper.id("cartel"), testCartel());
@@ -132,11 +145,15 @@ public class GuiHelperClient implements ClientModInitializer {
 
         List<String> toggleIds = List.of("alpha", "beta", "gamma");
 
-        Gui gui = new Gui().setBackground(background).setDarkBackground(true);
+        Gui gui = new Gui().setBackground(background).setDarkBackground(true).setFitToWindow(true).setFillRatio(0.8f);
 
         for (SlotObject slot : GuiHandlerRegistry.get(GuiHelper.id("debug_handler")).getSlots()) {
-            gui.addObject(new TextureObject(slot.getId(), Textures.TEXTURE_SLOT, slot.getObjectStartX() - 1, slot.getObjectStartY() - 1));
+            gui.addObject(new TextureObject(slot.getId(), Textures.TEXTURE_SLOT, slot.getObjectStartX() - 1, slot.getObjectStartY() - 1)
+                    .setShowWhen(() -> GuiPages.isActive(slot.getGroup())));
         }
+
+        gui.addObject(new ButtonObject("page_input", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.input"), 0.7f), 60, 4, 44, 13, () -> GuiPages.set("input")));
+        gui.addObject(new ButtonObject("page_trade", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.trade"), 0.7f), 106, 4, 44, 13, () -> GuiPages.set("trade")));
 
         for (int index = 0; index < toggleIds.size(); index++) {
             gui.addObject(new ToggleObject(toggleIds.get(index), Textures.TEXTURE_TOGGLE_OFF, Textures.TEXTURE_TOGGLE_ON, 15, 20 + index * 20, 25, 13)
@@ -149,7 +166,7 @@ public class GuiHelperClient implements ClientModInitializer {
                 .addOption("hard", 0, 16, new TextWithDetail(Text.literal("Hard"), 0.5f))
                 .setTooltip(Text.literal("Pick one mode")));
 
-        gui.addObject(new ButtonObject("enter", buttonTexture, new TextWithDetail(Text.literal("Enter"), 0.7f), 60, 60, 88, 13, () -> {
+        gui.addObject(new ButtonObject("enter", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.enter"), 0.7f), 60, 60, 88, 13, () -> {
             ClientPlayNetworking.send(new GuiValuesPayload(GuiHelper.id("debug_handler"), gui.collectValues()));
             this.close();
         }));

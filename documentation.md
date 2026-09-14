@@ -90,7 +90,11 @@ Gui gui = new Gui()
 | `setTitle(Text)` | `""` | Screen title (narration; handler screens use `GuiHandler`'s) |
 | `setBackground(Texture)` | none | Background, drawn at the GUI origin |
 | `setSize(int, int)` | background draw size | Explicit size; needed only with no background |
-| `setSizeMultiplicator(float)` | `1.0f` | Scales the whole GUI. Clamped to ≥ `0.1f` |
+| `setSizeMultiplicator(float)` | `1.0f` | Fixed scale for the whole GUI. Clamped to ≥ `0.1f` |
+| `setFitToWindow(boolean)` | `false` | Derive the scale from the window instead — see below |
+| `setFillRatio(float)` | `1.0f` | Fraction of the window fit mode targets. Clamped to `0.1f .. 1.0f` |
+| `setMaxSizeMultiplicator(float)` | `4.0f` | Upper clamp for the derived scale |
+| `setBuilder(Consumer<Gui>)` | none | Rebuild objects once per opening — see [§10](#10-state-and-lifecycle) |
 | `setDarkBackground(boolean)` | `false` | Vanilla darkening behind the GUI |
 | `setBlur(boolean)` / `activeBlur()` | `true` | Background blur |
 | `setShouldPause(boolean)` | `false` | Pause singleplayer |
@@ -108,6 +112,24 @@ gui.validateIds();                              // manual re-check
 ```
 
 `getSizeX()` / `getSizeY()` return the explicit size if set, else the background's draw size, else `0`.
+
+### Fit to window
+
+```java
+gui.setFitToWindow(true).setFillRatio(0.8f).setMaxSizeMultiplicator(3.0f);
+```
+
+`GuiRenderer.init(w, h, adder)` then computes
+
+```
+min(w * fillRatio / getSizeX(), h * fillRatio / getSizeY())
+```
+
+clamped to `0.1f .. maxSizeMultiplicator`. The result lives on the **`GuiRenderer`**, not on the `Gui` — a shared `Gui` instance is never mutated by fit mode, and `getSizeMultiplicator()` keeps returning whatever you set.
+
+`init()` runs on opening **and** on every window resize, so the GUI re-fits as the window changes. It needs a real size: with no background and no `setSize(...)`, `getSizeX()` is `0` and fit mode falls back to the fixed multiplier.
+
+Fit mode makes a **non-integer** multiplier the normal case, including values below `1.0f` when the GUI is larger than the window. Both screen types already divide every mouse entry point by the multiplier and place slots in the same scaled space, so picking follows rendering — see [§11](#11-rendering-internals).
 
 ---
 
@@ -246,6 +268,24 @@ new TextFieldObject("name", texture, new TextWithDetail(Text.literal("Name")), 5
 ```
 
 Last parameter is `maxLength`. The `TextWithDetail` is the widget **message**, not the content. Value: `String`.
+
+### TextAreaObject
+
+Multiline text, backed by vanilla's `EditBoxWidget`.
+
+```java
+new TextAreaObject("notes", texture, null, 110, 60, 60, 50, 256)
+        .setDefaultValue("");
+```
+
+Same constructor shape and the same value contract as `TextFieldObject` — `String`, `setDefaultValue(String)`, `resetState` / `applyData` / `collectData`, last parameter `maxLength`. Text wraps at the widget width and the wheel scrolls it once the content overflows.
+
+Two things it does **not** inherit from vanilla:
+
+- `ScrollableWidget.renderWidget` scissors with raw coordinates. `TexturedTextAreaWidget` re-implements it through `UtilsWidgets.enableScissor`, so the clip is transformed by the matrix stack and composes with an enclosing `BoxObject` and with the size multiplier.
+- `ScrollableWidget.mouseScrolled` consumes **every** scroll while visible, without a bounds check — which would swallow the wheel for the whole box it sits in. The override requires `isWithinBounds` and `overflows()` first, so scrolling outside it falls through to the parent box.
+
+The background is the `Texture` you pass; the vanilla text-field box is never drawn.
 
 ### BoxObject
 
@@ -431,6 +471,8 @@ GuiHandlerRegistry.register(GuiHelper.id("forge"), new GuiHandler()
 |---|---|
 | `addSlot(SlotObject)` | one slot |
 | `addSlotGrid(idPrefix, startIndex, x, y, columns, rows)` | grid, ids `<prefix>_<index>` |
+| `group(String)` | assigns a group to the slots the **previous** `addSlot` / `addSlotGrid` added |
+| `setDefaultGroup(String)` | the group active when the GUI opens |
 | `setPlayerInventory(x, y)` | 3×9 main + hotbar at `y + HOTBAR_OFFSET_Y` |
 
 Constants: `SLOT_SIZE` 18, `PLAYER_INVENTORY_COLUMNS` 9, `PLAYER_INVENTORY_ROWS` 3, `PLAYER_INVENTORY_SIZE` 36, `HOTBAR_OFFSET_Y` 58.
@@ -481,6 +523,81 @@ What a locked slot **displays** comes from the inventory passed to `GuiNetwork.o
 
 Locked slots still count in `getContentSize()` and `getInventorySize()`, so handler indices and the `quickMove` insert ranges never shift.
 
+### Slot groups — pages inside one handler
+
+A tab editor wants 15 inventory slots on one tab and 36 trade slots on another, without reopening the screen. Slots are the sync protocol, so **every** slot stays registered with a stable index for the whole lifetime of the handler; a group is only activated or deactivated.
+
+```java
+GuiHandlerRegistry.register(GuiHelper.id("editor"), new GuiHandler()
+        .setTitle(Text.translatable("mymod.editor.title"))
+        .addSlotGrid("inv", 0, 8, 18, 5, 3).group("inventory")
+        .addSlotGrid("trade", 15, 8, 18, 9, 4).group("trade")
+        .setDefaultGroup("inventory")
+        .setPlayerInventory(8, 140));
+```
+
+`group(String)` reads best right after the call that added the slots; `addSlot(slot, group)` and `addSlotGrid(..., group)` are the same thing in one call, and `SlotObject.setGroup(String)` / `getGroup()` are there for slots you build yourself. A slot with **no** group (`null`, the default) is always active — chrome that belongs to every page.
+
+| Method | Where | Effect |
+|---|---|---|
+| `SlotObject.setGroup(String)` / `getGroup()` | `src/main` | the slot's group; `null` = always active |
+| `GuiHandler.group(String)` | `src/main` | applies a group to the last-added slots |
+| `GuiHandler.setDefaultGroup(String)` | `src/main` | group active on opening |
+| `GuiHandler.getGroups()` / `hasGroup(String)` / `getSlots(String)` | `src/main` | introspection |
+| `CustomScreenHandler.getActiveGroup()` / `setActiveGroup(String)` | `src/main` | the live page |
+| `CustomScreenHandler.isGroupActive(String)` | `src/main` | `group == null || group.equals(active)` |
+
+The active group is seeded from the `GuiData` passed to `openHandler` under the key `CustomScreenHandler.GROUP_KEY` (`"gui.group"`), falling back to `setDefaultGroup(...)`. Because the same `GuiOpenData` rides the extended handler type to the client, both sides start on the same page:
+
+```java
+GuiNetwork.openHandler(player, GuiHelper.id("editor"),
+        new GuiData().set(CustomScreenHandler.GROUP_KEY, "trade"));
+```
+
+**Rendering and picking are free.** In 1.20.6 `Slot.isEnabled()` gates all three of `HandledScreen`'s uses: `drawSlot`, the `focusedSlot` assignment in `render`, and `getSlotAt` — which is what `mouseClicked` picks with. `GuiSlot.isEnabled()` returns `handler.isGroupActive(object.getGroup())`, so an inactive slot stops drawing *and* stops being clickable with no client-side code of ours. Nothing is needed in `CustomHandledScreen`.
+
+The **decoration** is yours, though: the `TextureObject` you drew behind a slot is an ordinary `GuiObject` and keeps rendering unless you say otherwise.
+
+```java
+for (SlotObject slot : GuiHandlerRegistry.get(GuiHelper.id("editor")).getSlots()) {
+    gui.addObject(new TextureObject(slot.getId(), Textures.TEXTURE_SLOT,
+                    slot.getObjectStartX() - 1, slot.getObjectStartY() - 1)
+            .setShowWhen(() -> GuiPages.isActive(slot.getGroup())));
+}
+```
+
+**Never trust the client.** `GuiSlot` returns `false` from `canInsert` and `canTakeItems` for an inactive group, exactly as it does for a locked slot — the two compose, and a locked slot in an inactive group is refused by either test alone. That covers `SWAP` (number keys), `THROW` (`Q`) and `PICKUP_ALL` (double-click merge), which all route through `canTakeItems` on the source. `quickMove` is the one hole: `insertItem` consults `canInsert` on every destination, so destinations are covered, but `quickMove` never consults `canTakeItems` on its source — so it tests the source slot itself and returns `ItemStack.EMPTY`. `onSlotClick` additionally drops any click on a slot whose group is inactive, before the `SlotClickHandler` and before `super`.
+
+### Switching page
+
+Switching is **C2S**, because the server is what enforces the gate. It never closes or rebuilds the screen — mouse focus, scroll offsets and text-field state all survive.
+
+```java
+new ButtonObject("tab_trade", texture, text, 60, 4, 44, 13, () -> GuiPages.set("trade"));
+```
+
+| `GuiPages` — `src/client` | Effect |
+|---|---|
+| `set(String group)` | applies the group to the open handler, then sends `GuiPagePayload` |
+| `get()` | the active group of the open handler, or `null` |
+| `isActive(String group)` | `null`-safe test for `setShowWhen` |
+| `getHandler()` | the open `CustomScreenHandler`, or `null` |
+
+`GuiPages` reads the handler off `MinecraftClient.currentScreen`, so it holds no state of its own and cannot drift. Outside a `CustomHandledScreen` every call is a no-op returning `null`.
+
+`GuiPagePayload(Identifier gui, String group)` is validated exactly like `GuiValuesPayload`, plus two checks of its own:
+
+| Check | Failure |
+|---|---|
+| `PacketCodecs.string(MAX_GROUP_LENGTH)` — 64 chars | decode fails |
+| `GuiSessions.hasOpen(player, gui)` | warn, drop |
+| `player.currentScreenHandler` is a `CustomScreenHandler` for that `Identifier` | warn, drop |
+| `guiHandler.hasGroup(group)` | warn, drop |
+
+The empty string means "no group active"; `setActiveGroup` normalises it and `null` to the same thing.
+
+The flow is client-driven only. A server-side `setActiveGroup(...)` changes what the server enforces but does **not** reach the client — to open a GUI on a given page, seed `GROUP_KEY` in the `GuiData` instead.
+
 ### Look — `src/client`, same `Identifier`
 
 ```java
@@ -512,11 +629,13 @@ With no inventory the handler allocates a `SimpleInventory` of the derived size 
 
 One `ExtendedScreenHandlerType<CustomScreenHandler, GuiOpenData>` is registered for the whole framework. Vanilla's `OpenScreenS2CPacket` carries only syncId, type and title, so the layout `Identifier` and the `GuiData` ride along as the extended data. Handlers can therefore be registered at any time without a registry entry each.
 
-`onSlotClick` routes an index in `0 .. contentSize-1` to its `SlotObject`: with a click handler it fires server-side only (`!player.getWorld().isClient`) and default handling is skipped. Locking is enforced by a `Slot` subclass whose `canInsert` / `canTakeItems` return `false` — which covers `SWAP` (number keys), `THROW` (`Q`) and `PICKUP_ALL` (double-click merge) for free. `quickMove` is the exception: vanilla checks `canInsert` on the destination but never `canTakeItems` on the source, so it guards the source slot explicitly.
+`onSlotClick` routes an index in `0 .. contentSize-1` to its `SlotObject`: a click on an inactive group is dropped, then, with a click handler, it fires server-side only (`!player.getWorld().isClient`) and default handling is skipped.
+
+Every content slot is one class, `GuiSlot`, reading locking, grouping and the background sprite straight off its `SlotObject` — so the options compose instead of multiplying into a subclass per combination. `canInsert` / `canTakeItems` return `false` when the slot is locked **or** its group is inactive, which covers `SWAP` (number keys), `THROW` (`Q`) and `PICKUP_ALL` (double-click merge) for free. `quickMove` is the exception: vanilla checks `canInsert` on the destination but never `canTakeItems` on the source, so it guards the source slot explicitly.
 
 Handler slot indices are `0 .. contentSize-1` for content, then `contentSize .. +35` for the player inventory — which is exactly what `quickMove` uses for its `insertItem` ranges. `getContentSize()` is the **slot count**, not `getInventorySize()`; they differ if you map two slots to one inventory index.
 
-`SlotObject`'s optional `backgroundSprite` goes through `TexturedSlot`, so the identifier must name a sprite stitched into the **block atlas** (e.g. `gui-helper:item/empty_slot` from `assets/gui-helper/textures/item/empty_slot.png`), not a loose `textures/gui/*.png`.
+`SlotObject`'s optional `backgroundSprite` goes through `GuiSlot.getBackgroundSprite()`, so the identifier must name a sprite stitched into the **block atlas** (e.g. `gui-helper:item/empty_slot` from `assets/gui-helper/textures/item/empty_slot.png`), not a loose `textures/gui/*.png`.
 
 ---
 
@@ -531,9 +650,41 @@ Values live on the **object**, not the widget. That decides when they survive:
 
 `resetState()` runs from the `GuiRenderer` constructor — once per screen instance, not per `init()`. The game calls `init()` for both opening and resizing, so it can't tell them apart; the constructor can.
 
-Stateful: `ToggleObject` (boolean), `TextFieldObject`, `RadioButtonObject`, `DropdownObject` (String + scroll), `ScrollBarObject` (scroll), `ItemRenderObject` (stack).
+Stateful: `ToggleObject` (boolean), `TextFieldObject`, `TextAreaObject`, `RadioButtonObject`, `DropdownObject` (String + scroll), `ScrollBarObject` (scroll), `ItemRenderObject` (stack).
 
 A registered `Gui` is a **shared instance**. That's fine on a client with one screen at a time, but it is not re-entrant, and `setData` overwrites the previous opening's data.
+
+### Rebuilding content at runtime
+
+A dialogue tree or a quest list is data-driven and changes while the screen is open, but a registered `Gui` is built once at `onInitializeClient`. `setBuilder` is the seam:
+
+```java
+gui.setBuilder(built -> {
+    BoxObject list = built.getObject("entries", BoxObject.class);
+
+    for (int index = 0; index < built.getData().getInt("count", 0); index++) {
+        built.addObject(list, new TextObject("entry_" + index, text(index), 2, 2 + index * 10));
+    }
+});
+```
+
+| Method | Effect |
+|---|---|
+| `setBuilder(Consumer<Gui>)` | the builder; `null` disables it |
+| `hasBuilder()` / `getBuilder()` | introspection |
+| `build()` | runs it — called for you, once per screen opening |
+| `addObject(BoxObject, GuiObject)` | adds into a box **and** tracks it for the next rebuild |
+
+`GuiRenderer`'s constructor calls `build()`, then `resetState()`, then `applyData()` — so objects the builder added take part in the normal data pipeline like any statically declared one, and the builder itself can already read `gui.getData()` (both `GuiRegistry.open` and `CustomHandledScreen` call `setData` before constructing the renderer).
+
+Each run **removes exactly what the previous run added** and nothing else. Objects added through `addObject(...)` while the builder is running are recorded with the list that owns them — the `Gui`'s own list, or a `BoxObject`'s — and removed from it on the next run. Objects you declared statically are never touched. `validateIds()` re-runs afterwards, so a builder that emits a duplicate id throws at build time rather than rendering twice.
+
+**What a builder means for a shared `Gui`.** The shared instance from [above](#10-state-and-lifecycle) is the reason `build()` is destructive rather than additive: opening the same `Gui` twice runs the builder twice against the *same* object list, so the second run must undo the first or the list grows every time. The consequences follow from that:
+
+- Build from the **arguments** — `built.getData()` and your own live state — never by appending to what is already there.
+- A stale `GuiObject` from a previous opening still holds the widget it cached; it is dropped with the object and never re-registered.
+- Two screens on one `Gui` at once would fight over the object list. As with `setData`, that isn't supported, and a client only shows one screen at a time.
+- No builder means no tracking and no removal: a `Gui` with no builder behaves exactly as before.
 
 ---
 
@@ -543,16 +694,22 @@ A registered `Gui` is a **shared instance**. That's fine on a client with one sc
 
 | Method | Role |
 |---|---|
-| `init(w, h, Consumer<ClickableWidget>)` | Centring + the `register` loop |
+| `init(w, h, Consumer<ClickableWidget>)` | Fit computation, centring, and the `register` loop |
 | `syncVisibility()` | `showWhen` → `widget.visible` |
-| `pushScale` / `popScale` | The `sizeMultiplicator` matrix |
+| `pushScale` / `popScale` | The size-multiplier matrix |
+| `pushUnscaled` | Cancels it for a full-screen pass |
+| `getSizeMultiplicator()` | The live multiplier — derived in fit mode |
 | `scaled(double)` | Mouse-coordinate division |
 | `drawBackground(context)` | Background blit |
 | `renderOverlays` / `isOverlayCapturing` / `mouseClickedOverlay` / `mouseScrolledOverlay` / `closeOverlays` | Overlay pass |
 
 ### Scaling
 
-`setSizeMultiplicator(2)` wraps rendering in a scale matrix; every mouse entry point divides by the same factor, so hit-testing, hover and slot picking stay correct. Tooltips draw after `render` at the raw cursor, unscaled.
+The multiplier lives on the `GuiRenderer` — either the `Gui`'s fixed `sizeMultiplicator`, or the value fit mode derives from the window in `init()` ([§3](#3-gui--the-screen-definition)). `pushScale` wraps rendering in a scale matrix; every mouse entry point divides by the same factor through `scaled(...)`, so hit-testing, hover and slot picking stay correct. Tooltips draw after `render` at the raw cursor, unscaled.
+
+`HandledScreen` positions **and** hit-tests slots from `this.x` / `this.y` plus the raw slot coordinates, with no matrix applied. That works here because `CustomHandledScreen` puts both in the *same* scaled space: `this.x` / `this.y` are assigned from `renderer.getGuiX()` / `getGuiY()`, which are computed in scaled units, and every mouse coordinate reaching `super` has been divided by the multiplier. Rendering runs inside the scale matrix over the same numbers, so slot geometry and slot picking cannot drift apart — at a non-integer multiplier the two agree to within vanilla's own ±1 px tolerance in `isPointWithinBounds`, which is measured in scaled units and so widens to ±`multiplier` screen pixels. Slot pitch is 18 against a 16 px slot, so even at the `4.0f` clamp the tolerance zones of neighbouring slots meet without overlapping and `getSlotAt` stays unambiguous.
+
+`pushUnscaled` is the escape hatch for the passes that are genuinely full-screen. `renderDarkening` and `renderPanoramaBackground` fill `0, 0, width, height` in raw screen coordinates; under the scale matrix a multiplier below `1.0f` would leave the edges of the screen uncovered, which fit mode makes reachable. Both are wrapped in `pushUnscaled` / `popScale`, cancelling the scale for exactly that draw. `applyBlur` is a post-processing pass and ignores the matrix stack entirely.
 
 ### Overlays
 
@@ -612,12 +769,16 @@ public ClickableWidget register(int bgX, int bgY) {
 4. Extend `ClickableWidget` (or `PressableWidget` / `TextFieldWidget`), positioning as `bgX + getObjectStartX()`.
 5. If it has a value, override `resetState` / `applyData` / `collectData`.
 6. If it draws outside its bounds, implement `OverlayRenderer`.
+7. If it clips, scissor through `UtilsWidgets.enableScissor(context, startX, startY, endX, endY)` — never `DrawContext.enableScissor`, which takes raw framebuffer coordinates ([§11](#11-rendering-internals)).
+
+Subclassing a vanilla widget, check what it does with the matrix stack and with bounds before trusting it. `ScrollableWidget` fails both: it scissors raw, and its `mouseScrolled` consumes every scroll while visible without testing `isWithinBounds`. `TexturedTextAreaWidget` overrides both — see [§5](#5-object-reference).
 
 Decorative objects set `active = false` and override `isMouseOver` to return `false` — they still detect hover, because `ClickableWidget.render` sets `hovered` from bounds without consulting `active`.
 
 ### Drawing helpers
 
 ```java
+UtilsWidgets.enableScissor(context, startX, startY, endX, endY);
 UtilsWidgets.drawTexture(context, texture, x, y, sizeX, sizeY);
 UtilsWidgets.drawTexture(context, texture, x, y, sizeX, sizeY, opacity);
 UtilsWidgets.drawText(context, text, x, y, argb, scale);
@@ -625,7 +786,7 @@ UtilsWidgets.drawLabel(context, guiObject, x, y);
 UtilsWidgets.drawItem(context, x, y, scale, item /* or ItemStack */);
 ```
 
-`drawTexture` handles nine-slice, opacity (via `RenderSystem.setShaderColor`, restored afterwards) and null textures.
+`drawTexture` handles nine-slice, opacity (via `RenderSystem.setShaderColor`, restored afterwards) and null textures. `enableScissor` transforms the rect through the current matrix before handing it to `DrawContext`, so it composes with the size multiplier and with any enclosing `BoxObject`.
 
 ---
 
@@ -677,6 +838,43 @@ for (int i = 0; i < entries.size(); i++) {
 }
 ```
 
+**…that changes while the screen is open**
+
+```java
+gui.addObject(new BoxObject("entries", null, 5, 20, 160, 100));
+
+gui.setBuilder(built -> {
+    BoxObject box = built.getObject("entries", BoxObject.class);
+
+    for (int i = 0; i < entries.size(); i++) {
+        built.addObject(box, new TextObject("entry_" + i, new TextWithDetail(entries.get(i), 0.5f), 2, 2 + i * 10));
+    }
+});
+```
+
+**Tabs in one handler GUI**
+
+```java
+// src/main
+GuiHandlerRegistry.register(id, new GuiHandler()
+        .addSlotGrid("inv", 0, 8, 18, 5, 3).group("inventory")
+        .addSlotGrid("trade", 15, 8, 18, 9, 4).group("trade")
+        .setDefaultGroup("inventory")
+        .setPlayerInventory(8, 140));
+
+// src/client
+gui.addObject(new ButtonObject("tab_inventory", texture, inventoryText, 8, 4, 44, 13, () -> GuiPages.set("inventory")));
+gui.addObject(new ButtonObject("tab_trade", texture, tradeText, 54, 4, 44, 13, () -> GuiPages.set("trade")));
+
+tradeOnlyLabel.setShowWhen(() -> GuiPages.isActive("trade"));
+```
+
+**Fill the window whatever its size**
+
+```java
+gui.setFitToWindow(true).setFillRatio(0.8f).setMaxSizeMultiplicator(3.0f);
+```
+
 ---
 
 ## 14. Pitfalls
@@ -690,8 +888,12 @@ for (int i = 0; i < entries.size(); i++) {
 | Texture stretched oddly | Missing `setNineSlice(...)` for a resizable background |
 | Text clipped in a box | `TextWithDetail` scale isn't applied to hitboxes outside `TextObject` |
 | Slots misaligned at `sizeMultiplicator > 1` | Custom mouse handling that doesn't divide by the multiplier |
+| Slots misaligned under `setFitToWindow(true)` | Same cause, now the normal case — the derived multiplier is rarely `1.0f` or even an integer. `this.x` / `this.y` and every mouse coordinate must be in the same scaled space |
+| Shift-click drains a slot in an inactive group | `quickMove` never consults `canTakeItems` on the source — it must return `ItemStack.EMPTY` when the source slot's group is inactive |
+| An inactive group still shows its slot background | `isEnabled()` hides the slot, not your `TextureObject` — gate the decoration with `setShowWhen(() -> GuiPages.isActive(group))` |
+| Objects pile up each time a GUI opens | A builder that appends instead of rebuilding, or objects added to a box directly rather than via `gui.addObject(box, object)` so they aren't tracked |
 | Empty slot icon missing | `backgroundSprite` must be a block-atlas sprite, not `textures/gui/*.png` |
-| Shift-click drains a locked slot | `quickMove` never consults `canTakeItems` on the source — it must return `ItemStack.EMPTY` for a locked slot itself |
+| Shift-click drains a locked slot | Same hole, same fix — the source guard covers locked and grouped slots alike |
 | Scroll resets | Expected on reopening; preserved on resize |
 
 ### Debug commands

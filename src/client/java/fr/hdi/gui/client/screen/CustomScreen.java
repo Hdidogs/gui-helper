@@ -83,12 +83,20 @@ public class CustomScreen extends Screen {
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
         assert this.client != null;
+
         if (this.client.world == null) {
+            renderer.pushUnscaled(context);
             this.renderPanoramaBackground(context, delta);
+            renderer.popScale(context);
         }
 
         if (gui.isBlur()) this.applyBlur(delta);
-        if (gui.isDarkBackground()) this.renderDarkening(context);
+
+        if (gui.isDarkBackground()) {
+            renderer.pushUnscaled(context);
+            this.renderDarkening(context);
+            renderer.popScale(context);
+        }
 
         renderer.drawBackground(context);
     }

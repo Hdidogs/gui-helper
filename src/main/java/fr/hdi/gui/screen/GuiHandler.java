@@ -5,7 +5,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class GuiHandler {
     public static final int SLOT_SIZE = 18;
@@ -20,27 +22,90 @@ public class GuiHandler {
     private boolean playerInventory;
     private int playerInventoryX;
     private int playerInventoryY;
+    private String defaultGroup;
+    private int lastAddedIndex = -1;
 
     public GuiHandler() {
         title = Text.empty();
     }
 
     public GuiHandler addSlot(SlotObject slot) {
+        lastAddedIndex = slots.size();
         slots.add(slot);
 
         return this;
     }
 
+    public GuiHandler addSlot(SlotObject slot, String group) {
+        return addSlot(slot.setGroup(group));
+    }
+
     public GuiHandler addSlotGrid(String idPrefix, int startIndex, int objectStartX, int objectStartY, int columns, int rows) {
+        int first = slots.size();
+
         for (int row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
                 int index = startIndex + column + row * columns;
 
-                addSlot(new SlotObject(idPrefix + "_" + index, index, objectStartX + column * SLOT_SIZE, objectStartY + row * SLOT_SIZE));
+                slots.add(new SlotObject(idPrefix + "_" + index, index, objectStartX + column * SLOT_SIZE, objectStartY + row * SLOT_SIZE));
             }
         }
 
+        lastAddedIndex = first;
+
         return this;
+    }
+
+    public GuiHandler addSlotGrid(String idPrefix, int startIndex, int objectStartX, int objectStartY, int columns, int rows, String group) {
+        return addSlotGrid(idPrefix, startIndex, objectStartX, objectStartY, columns, rows).group(group);
+    }
+
+    public GuiHandler group(String group) {
+        if (lastAddedIndex < 0) throw new IllegalStateException("group() must follow addSlot or addSlotGrid");
+
+        for (int index = lastAddedIndex; index < slots.size(); index++) slots.get(index).setGroup(group);
+
+        return this;
+    }
+
+    public GuiHandler setDefaultGroup(String defaultGroup) {
+        this.defaultGroup = defaultGroup == null || defaultGroup.isEmpty() ? null : defaultGroup;
+
+        return this;
+    }
+
+    public String getDefaultGroup() {
+        return defaultGroup;
+    }
+
+    public Set<String> getGroups() {
+        Set<String> groups = new LinkedHashSet<>();
+
+        for (SlotObject slot : slots) {
+            if (slot.hasGroup()) groups.add(slot.getGroup());
+        }
+
+        return groups;
+    }
+
+    public boolean hasGroup(String group) {
+        if (group == null) return true;
+
+        for (SlotObject slot : slots) {
+            if (group.equals(slot.getGroup())) return true;
+        }
+
+        return false;
+    }
+
+    public List<SlotObject> getSlots(String group) {
+        List<SlotObject> found = new ArrayList<>();
+
+        for (SlotObject slot : slots) {
+            if (slot.getGroup() == null ? group == null : slot.getGroup().equals(group)) found.add(slot);
+        }
+
+        return found;
     }
 
     public GuiHandler setPlayerInventory(int objectStartX, int objectStartY) {
