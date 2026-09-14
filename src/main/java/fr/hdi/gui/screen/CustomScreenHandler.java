@@ -4,6 +4,8 @@ import fr.hdi.gui.GuiHelper;
 import fr.hdi.gui.network.GuiOpenData;
 import fr.hdi.gui.screen.objects.SlotObject;
 import fr.hdi.gui.utils.GuiData;
+import fr.hdi.gui.screen.utils.LockedSlot;
+import fr.hdi.gui.screen.utils.LockedTexturedSlot;
 import fr.hdi.gui.screen.utils.TexturedSlot;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,6 +17,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Identifier;
 
 public class CustomScreenHandler extends ScreenHandler {
@@ -66,9 +69,23 @@ public class CustomScreenHandler extends ScreenHandler {
         return guiHandler.getSlots().size();
     }
 
+    public SlotObject getSlotObject(int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= getContentSize()) return null;
+
+        return guiHandler.getSlots().get(slotIndex);
+    }
+
     private Slot createSlot(SlotObject object) {
         if (object.hasBackgroundSprite()) {
+            if (object.isLocked()) {
+                return new LockedTexturedSlot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY(), object.getBackgroundSprite());
+            }
+
             return new TexturedSlot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY(), object.getBackgroundSprite());
+        }
+
+        if (object.isLocked()) {
+            return new LockedSlot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY());
         }
 
         return new Slot(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY());
@@ -88,10 +105,23 @@ public class CustomScreenHandler extends ScreenHandler {
     }
 
     @Override
+    public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
+        SlotObject object = getSlotObject(slotIndex);
+
+        if (object != null && object.hasOnClick()) {
+            if (!player.getWorld().isClient) object.getOnClick().onClick(this, player, button, actionType);
+
+            return;
+        }
+
+        super.onSlotClick(slotIndex, button, actionType, player);
+    }
+
+    @Override
     public ItemStack quickMove(PlayerEntity player, int slotIndex) {
         Slot slot = this.slots.get(slotIndex);
 
-        if (!slot.hasStack()) return ItemStack.EMPTY;
+        if (!slot.hasStack() || !slot.canTakeItems(player)) return ItemStack.EMPTY;
 
         ItemStack slotStack = slot.getStack();
         ItemStack originalStack = slotStack.copy();

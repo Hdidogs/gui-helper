@@ -437,6 +437,50 @@ Constants: `SLOT_SIZE` 18, `PLAYER_INVENTORY_COLUMNS` 9, `PLAYER_INVENTORY_ROWS`
 
 `SlotObject(id, index, x, y)` — `index` is into the **content inventory**, not the handler. `getInventorySize()` is derived from the highest index, so size is never declared twice.
 
+### Locked slots and click callbacks
+
+Two independent fluent options on `SlotObject`:
+
+| Method | Effect |
+|---|---|
+| `setLocked(boolean)` | the slot rejects every item movement — insert, take, shift-click, number-key swap, `Q` throw, double-click merge |
+| `setOnClick(SlotClickHandler)` | server-side callback; the slot's default click handling is skipped |
+
+```java
+@FunctionalInterface
+public interface SlotClickHandler {
+    void onClick(CustomScreenHandler handler, PlayerEntity player, int button, SlotActionType actionType);
+}
+```
+
+The callback receives the `CustomScreenHandler` because `SlotObject`s are registered once statically — per-opening context comes from `handler.getData()`, never from a field on the object.
+
+Shop example — a row of locked, clickable offers:
+
+```java
+GuiHandlerRegistry.register(GuiHelper.id("shop"), new GuiHandler()
+        .setTitle(Text.literal("Shop"))
+        .addSlot(new SlotObject("offer_0", 0, 8, 18)
+                .setLocked(true)
+                .setOnClick((handler, player, button, actionType) -> {
+                    int price = handler.getData().getInt("price_0");
+
+                    buy(player, handler.getInventory().getStack(0), price);
+                }))
+        .setPlayerInventory(8, 84));
+```
+
+```java
+SimpleInventory offers = new SimpleInventory(1);
+offers.setStack(0, new ItemStack(Items.DIAMOND, 4));
+
+GuiNetwork.openHandler(player, GuiHelper.id("shop"), new GuiData().set("price_0", 64), offers);
+```
+
+What a locked slot **displays** comes from the inventory passed to `GuiNetwork.openHandler(player, id, data, inventory)` — locking only blocks movement, it does not fill the slot. With no inventory the handler allocates an empty `SimpleInventory` and the slots render empty.
+
+Locked slots still count in `getContentSize()` and `getInventorySize()`, so handler indices and the `quickMove` insert ranges never shift.
+
 ### Look — `src/client`, same `Identifier`
 
 ```java
@@ -467,6 +511,8 @@ With no inventory the handler allocates a `SimpleInventory` of the derived size 
 ### How it works
 
 One `ExtendedScreenHandlerType<CustomScreenHandler, GuiOpenData>` is registered for the whole framework. Vanilla's `OpenScreenS2CPacket` carries only syncId, type and title, so the layout `Identifier` and the `GuiData` ride along as the extended data. Handlers can therefore be registered at any time without a registry entry each.
+
+`onSlotClick` routes an index in `0 .. contentSize-1` to its `SlotObject`: with a click handler it fires server-side only (`!player.getWorld().isClient`) and default handling is skipped. Locking is enforced by a `Slot` subclass whose `canInsert` / `canTakeItems` return `false` — which covers `SWAP` (number keys), `THROW` (`Q`) and `PICKUP_ALL` (double-click merge) for free. `quickMove` is the exception: vanilla checks `canInsert` on the destination but never `canTakeItems` on the source, so it guards the source slot explicitly.
 
 Handler slot indices are `0 .. contentSize-1` for content, then `contentSize .. +35` for the player inventory — which is exactly what `quickMove` uses for its `insertItem` ranges. `getContentSize()` is the **slot count**, not `getInventorySize()`; they differ if you map two slots to one inventory index.
 
@@ -645,6 +691,7 @@ for (int i = 0; i < entries.size(); i++) {
 | Text clipped in a box | `TextWithDetail` scale isn't applied to hitboxes outside `TextObject` |
 | Slots misaligned at `sizeMultiplicator > 1` | Custom mouse handling that doesn't divide by the multiplier |
 | Empty slot icon missing | `backgroundSprite` must be a block-atlas sprite, not `textures/gui/*.png` |
+| Shift-click drains a locked slot | `quickMove` never consults `canTakeItems` on the source — it must return `ItemStack.EMPTY` for a locked slot itself |
 | Scroll resets | Expected on reopening; preserved on resize |
 
 ### Debug commands

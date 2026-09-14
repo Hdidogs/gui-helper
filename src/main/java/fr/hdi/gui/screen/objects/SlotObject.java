@@ -8,6 +8,8 @@ public class SlotObject {
     private int objectStartX;
     private int objectStartY;
     private Identifier backgroundSprite;
+    private boolean locked;
+    private SlotClickHandler onClick;
 
     public SlotObject(String id, int index, int objectStartX, int objectStartY) {
         this(id, index, objectStartX, objectStartY, null);
@@ -43,5 +45,29 @@ public class SlotObject {
 
     public boolean hasBackgroundSprite() {
         return backgroundSprite != null;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public SlotObject setLocked(boolean locked) {
+        this.locked = locked;
+
+        return this;
+    }
+
+    public SlotClickHandler getOnClick() {
+        return onClick;
+    }
+
+    public SlotObject setOnClick(SlotClickHandler onClick) {
+        this.onClick = onClick;
+
+        return this;
+    }
+
+    public boolean hasOnClick() {
+        return onClick != null;
     }
 }
