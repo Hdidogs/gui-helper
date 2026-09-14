@@ -26,7 +26,7 @@ public class GuiSlot extends Slot {
 
     @Override
     public boolean isEnabled() {
-        return handler.isGroupActive(object.getGroup());
+        return handler == null || handler.isGroupActive(object.getGroup());
     }
 
     @Override
