@@ -11,6 +11,7 @@ public class ScrollBarObject extends GuiObject {
     private GuiObject owner;
     private boolean autoPlaced;
     private double scrollY;
+    private boolean startAtEnd;
 
     public ScrollBarObject(String id) {
         this(id, Textures.TEXTURE_SCROLL_BAR, Textures.TEXTURE_SCROLL_SLIDER);
@@ -47,9 +48,19 @@ public class ScrollBarObject extends GuiObject {
         this.scrollY = scrollY;
     }
 
+    public boolean isStartAtEnd() {
+        return startAtEnd;
+    }
+
+    public ScrollBarObject setStartAtEnd(boolean startAtEnd) {
+        this.startAtEnd = startAtEnd;
+
+        return this;
+    }
+
     @Override
     public void resetState() {
-        this.scrollY = 0.0D;
+        this.scrollY = startAtEnd ? Double.MAX_VALUE : 0.0D;
     }
 
     public boolean isAutoPlaced() {
