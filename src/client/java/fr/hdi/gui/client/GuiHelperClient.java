@@ -106,11 +106,11 @@ public class GuiHelperClient implements ClientModInitializer {
 	}
 
     public Gui testCartel() {
-        Texture background = new Texture(GuiHelper.id("textures/gui/test.png"), 0, 0, 162, 106, 256, 256);
-        Texture uneButton = new Texture(GuiHelper.id("textures/gui/test.png"), 0, 106, 48, 82, 256, 256);
-        Texture quotidienButton = new Texture(GuiHelper.id("textures/gui/test.png"), 48, 106, 24, 34, 256, 256);
+        Texture background = new Texture(GuiHelper.id("textures/gui/shop.png"), 0, 0, 162, 106, 256, 256);
+        Texture uneButton = new Texture(GuiHelper.id("textures/gui/shop.png"), 0, 106, 48, 82, 256, 256);
+        Texture quotidienButton = new Texture(GuiHelper.id("textures/gui/shop.png"), 48, 106, 24, 34, 256, 256);
 
-        Texture bandeau = new Texture(GuiHelper.id("textures/gui/bandeau.png"), 0, 0, 48, 8, 48, 8);
+        Texture bandeau = new Texture(GuiHelper.id("textures/gui/price_header.png"), 0, 0, 48, 8, 48, 8);
 
         Texture img_1 = new Texture(GuiHelper.id("textures/gui/armor.png"), 0, 0, 289, 649, 289, 649);
         Texture img_2 = new Texture(GuiHelper.id("textures/gui/snow2.png"), 0, 0, 276, 512, 276, 512);
