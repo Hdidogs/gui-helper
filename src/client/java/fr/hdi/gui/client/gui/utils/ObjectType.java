@@ -11,5 +11,6 @@ public enum ObjectType {
     TEXT_AREA,
     ITEM_RENDER,
     RADIO_BUTTON,
-    TEXTURE
+    TEXTURE,
+    ENTITY
 }
