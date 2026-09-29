@@ -34,8 +34,16 @@ public class BoxObject extends GuiObject {
     }
 
     public BoxObject setScrollBar(ScrollBarObject scrollBar) {
+        if (this.scrollBar != null && this.scrollBar.isStartAtEnd()) scrollBar.setStartAtEnd(true);
+
         this.scrollBar = scrollBar;
         this.scrollBar.setOwner(this);
+
+        return this;
+    }
+
+    public BoxObject setStartAtEnd(boolean startAtEnd) {
+        getScrollBar().setStartAtEnd(startAtEnd);
 
         return this;
     }

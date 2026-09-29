@@ -10,6 +10,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4f;
@@ -128,6 +129,14 @@ public class UtilsWidgets {
     }
 
     public static void drawText(DrawContext context, Text text, float textX, float textY, int color, float scale) {
+        context.getMatrices().push();
+        context.getMatrices().translate(textX, textY, 0.0F);
+        context.getMatrices().scale(scale, scale, 1.0F);
+        context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, text, 0, 0, color);
+        context.getMatrices().pop();
+    }
+
+    public static void drawText(DrawContext context, OrderedText text, float textX, float textY, int color, float scale) {
         context.getMatrices().push();
         context.getMatrices().translate(textX, textY, 0.0F);
         context.getMatrices().scale(scale, scale, 1.0F);
