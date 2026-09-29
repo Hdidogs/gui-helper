@@ -10,12 +10,45 @@ import net.minecraft.client.gui.widget.ClickableWidget;
 
 public class TextFieldObject extends GuiObject {
     private int maxLength;
+    private int textStartX;
+    private int textStartY;
+    private int textSizeX;
+    private int textSizeY;
     private String defaultValue = "";
     private String value = "";
 
     public TextFieldObject(String id, Texture texture, TextWithDetail text, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY, int maxLength) {
         super(id, ObjectType.TEXT_FIELD, texture, text, objectStartX, objectStartY, objectSizeX, objectSizeY);
         this.maxLength = maxLength;
+    }
+
+    public TextFieldObject setTextBox(int textStartX, int textStartY, int textSizeX, int textSizeY) {
+        this.textStartX = textStartX;
+        this.textStartY = textStartY;
+        this.textSizeX = textSizeX;
+        this.textSizeY = textSizeY;
+
+        return this;
+    }
+
+    public boolean hasTextBox() {
+        return textSizeX > 0 && textSizeY > 0;
+    }
+
+    public int getTextStartX() {
+        return hasTextBox() ? textStartX : 0;
+    }
+
+    public int getTextStartY() {
+        return hasTextBox() ? textStartY : 0;
+    }
+
+    public int getTextSizeX() {
+        return hasTextBox() ? textSizeX : getObjectSizeX();
+    }
+
+    public int getTextSizeY() {
+        return hasTextBox() ? textSizeY : getObjectSizeY();
     }
 
     @Override

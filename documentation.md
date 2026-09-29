@@ -205,13 +205,17 @@ Draws the stack with its count overlay. `setShowItemTooltip(true)` shows the rea
 ```java
 new ButtonObject("close", texture, new TextWithDetail(Text.literal("X"), 0.7f), 158, 5, 13, 13, this::close)
         .setHoverAnimation(true)
-        .setEnableWhen(toggle::getValue);
+        .setEnableWhen(toggle::getValue)
+        .setTextBox(2, 2, 84, 9);
 ```
 
 | Method | Default | Effect |
 |---|---|---|
 | `setHoverAnimation(boolean)` | `true` | 1px lift on hover |
 | `setEnableWhen(BooleanSupplier)` | always on | Disabled ⇒ 50% opacity on texture **and** text, no hover lift, clicks blocked |
+| `setTextBox(x, y, sizeX, sizeY)` | the object rect | Centre the text in this box instead of the whole button |
+
+`setTextBox(...)` takes the same relative box as [`TextFieldObject`](#textfieldobject): the text is centred inside it rather than over the full button, and **shrinks to fit** it — see [Fitting text to a box](#fitting-text-to-a-box). The box moves with the hover lift. Unlike the text field it does **not** clip; oversized text is scaled down rather than cut.
 
 ### ToggleObject
 
@@ -265,9 +269,40 @@ The open list is an **overlay** — see [§11](#11-rendering-internals).
 ```java
 new TextFieldObject("name", texture, new TextWithDetail(Text.literal("Name")), 5, 147, 88, 13, 24)
         .setDefaultValue("player");
+
+// with an inner text box, so text can't sit on the texture's border
+new TextFieldObject("name", texture, text, 5, 147, 88, 13, 24)
+        .setTextBox(4, 3, 80, 8);
 ```
 
 Last parameter is `maxLength`. The `TextWithDetail` is the widget **message**, not the content. Value: `String`.
+
+`setTextBox(textStartX, textStartY, textSizeX, textSizeY)` declares a box **relative to the object's top-left** that the text is confined to. The texture still draws at the object rect, so a bordered texture keeps its border clear:
+
+```
+objectStart ┌────────────────────┐  texture, objectSizeX x objectSizeY
+            │ ┌────────────────┐ │
+            │ │ text box       │ │  textStart + textSize
+            │ └────────────────┘ │
+            └────────────────────┘
+```
+
+Text is drawn at the box's top-left, not centred — `setDrawsBackground(false)` makes `TextFieldWidget` start at its own origin — so use `textStartY` to position it vertically. It **shrinks to fit** the box height (see below). Clicking anywhere on the **texture** still focuses the field; only the text is clipped to the box. Without `setTextBox(...)` (or with a zero size) the text box is the object rect, exactly as before. Call it before the GUI is opened — the box is read when the widget is built.
+
+### Fitting text to a box
+
+Both `ButtonObject` and `TextFieldObject` scale their text down to fit their text box:
+
+```java
+UtilsWidgets.fitScale(text, maxScale, boxSizeX, boxSizeY)
+        // -> min(maxScale, boxSizeY / fontHeight, boxSizeX / textWidth), floored at 0.05
+```
+
+`maxScale` is the `TextWithDetail` size, so text only ever scales **down** — a box bigger than needed will not inflate it. Raise `textSize` if you want it larger.
+
+A button passes **both** dimensions, since its text is fixed. A text field passes **height only** — its content scrolls horizontally, so width must not drive the scale.
+
+Scaling a `TextFieldWidget` needs its input path remapped, which the framework does for you: `getInnerWidth()` is divided by the scale so trimming and scrolling know the real character capacity, and `onClick` maps the click offset back into unscaled text space so the cursor lands on the right character.
 
 ### TextAreaObject
 

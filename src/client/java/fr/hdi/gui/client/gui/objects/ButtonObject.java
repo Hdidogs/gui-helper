@@ -11,11 +11,44 @@ import java.util.function.BooleanSupplier;
 public class ButtonObject extends GuiObject {
     private boolean hoverAnimation = true;
     private Runnable onPress;
+    private int textStartX;
+    private int textStartY;
+    private int textSizeX;
+    private int textSizeY;
     private BooleanSupplier enableWhen = () -> true;
 
     public ButtonObject(String id, Texture texture, TextWithDetail text, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY, Runnable onPress) {
         super(id, ObjectType.BUTTON, texture, text, objectStartX, objectStartY, objectSizeX, objectSizeY);
         this.onPress = onPress;
+    }
+
+    public ButtonObject setTextBox(int textStartX, int textStartY, int textSizeX, int textSizeY) {
+        this.textStartX = textStartX;
+        this.textStartY = textStartY;
+        this.textSizeX = textSizeX;
+        this.textSizeY = textSizeY;
+
+        return this;
+    }
+
+    public boolean hasTextBox() {
+        return textSizeX > 0 && textSizeY > 0;
+    }
+
+    public int getTextStartX() {
+        return hasTextBox() ? textStartX : 0;
+    }
+
+    public int getTextStartY() {
+        return hasTextBox() ? textStartY : 0;
+    }
+
+    public int getTextSizeX() {
+        return hasTextBox() ? textSizeX : getObjectSizeX();
+    }
+
+    public int getTextSizeY() {
+        return hasTextBox() ? textSizeY : getObjectSizeY();
     }
 
     public Runnable getOnPress() {

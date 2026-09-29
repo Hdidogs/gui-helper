@@ -46,11 +46,11 @@ public class GuiHelperClient implements ClientModInitializer {
                 GuiHelper.LOGGER.info("name = {} / sound = {}", gui.getObject("name", TextFieldObject.class).getValue(), gui.getObject("sound", ToggleObject.class).getValue());
                 this.close();
             });
-            TextFieldObject textField = new TextFieldObject("name", text_field, new TextWithDetail(Text.literal("test")), 5, 147, 88, 13, 25);
+            TextFieldObject textField = new TextFieldObject("name", text_field, new TextWithDetail(Text.literal("test")), 5, 147, 88, 13, 25).setTextBox(3, 3, 82, 7);
             TextAreaObject textArea = new TextAreaObject("notes", text_field, null, 110, 60, 60, 50, 256);
 
             textArea.setLabel(new TextWithDetail(Text.translatable("gui-helper.debug.notes"), 0.5f));
-            TextObject textObject = new TextObject("title", new TextWithDetail(Text.literal("textField::getValue"), ColorHelper.RED, 0.5f), 45, 61);
+            TextObject textObject = new TextObject("title", new TextWithDetail(Text.translatable("gui-helper.debug.enter"), ColorHelper.RED, 0.5f), 45, 61);
             ItemRenderObject itemRender = new ItemRenderObject("redstone", Items.REDSTONE, 40, 61, 0.5f).setShowItemTooltip(true);
             ToggleObject toggleObject = new ToggleObject("sound", Textures.TEXTURE_TOGGLE_OFF, Textures.TEXTURE_TOGGLE_ON, 145, 27, 25, 13);
 

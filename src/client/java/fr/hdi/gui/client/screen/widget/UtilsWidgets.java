@@ -6,6 +6,7 @@ import fr.hdi.gui.client.gui.objects.GuiObject;
 import fr.hdi.gui.utils.TextWithDetail;
 import fr.hdi.gui.utils.Texture;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -15,6 +16,8 @@ import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 public class UtilsWidgets {
+    private static final float MIN_TEXT_SCALE = 0.05F;
+
     public static void enableScissor(DrawContext context, int startX, int startY, int endX, int endY) {
         Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
         Vector4f start = matrix.transform(new Vector4f(startX, startY, 0.0F, 1.0F));
@@ -81,6 +84,21 @@ public class UtilsWidgets {
         drawRegion(context, texture, rightX, y + top, right, centerSizeY, rightU, v + top, right, centerRegionSizeY);
 
         drawRegion(context, texture, x + left, y + top, centerSizeX, centerSizeY, u + left, v + top, centerRegionSizeX, centerRegionSizeY);
+    }
+
+    public static float fitScale(Text text, float maxScale, int boxSizeX, int boxSizeY) {
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        float scale = maxScale;
+
+        if (boxSizeY > 0) scale = Math.min(scale, (float) boxSizeY / textRenderer.fontHeight);
+
+        if (boxSizeX > 0 && text != null) {
+            int width = textRenderer.getWidth(text);
+
+            if (width > 0) scale = Math.min(scale, (float) boxSizeX / width);
+        }
+
+        return Math.max(MIN_TEXT_SCALE, scale);
     }
 
     public static void drawLabel(DrawContext context, GuiObject object, int x, int y) {

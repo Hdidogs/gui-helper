@@ -42,9 +42,11 @@ public class TexturedButtonWidget extends PressableWidget {
             int textColor = this.active ? guiObject.getText().getColor().getHexColor()
                     : guiObject.getText().getColor().withAlpha(DISABLED_OPACITY).getHexColor();
 
+            float scale = UtilsWidgets.fitScale(guiObject.getText().getText(), guiObject.getText().getTextSize(), guiObject.getTextSizeX(), guiObject.getTextSizeY());
+
             context.getMatrices().push();
-            context.getMatrices().translate(dx + getWidth() / 2.0F, dy + getHeight() / 2.0F, 0.0F);
-            context.getMatrices().scale(guiObject.getText().getTextSize(), guiObject.getText().getTextSize(), 1.0F);
+            context.getMatrices().translate(dx + guiObject.getTextStartX() + guiObject.getTextSizeX() / 2.0F, dy + guiObject.getTextStartY() + guiObject.getTextSizeY() / 2.0F, 0.0F);
+            context.getMatrices().scale(scale, scale, 1.0F);
             context.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, guiObject.getText().getText(), 0, -4, textColor);
             context.getMatrices().pop();
         }
