@@ -12,11 +12,40 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Util;
+import net.minecraft.util.math.Direction;
+import org.joml.Quaternionf;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 public class UtilsWidgets {
+    public static final float SPIN_DEGREES_PER_SECOND = 45.0F;
+
+    private static final float FULL_TURN = 360.0F;
+    private static final float DEGREES = (float) Math.PI / 180.0F;
+
+    public static float spinAngle(float speed) {
+        if (speed == 0.0F) return 0.0F;
+
+        long period = (long) (FULL_TURN * 1000.0F / (SPIN_DEGREES_PER_SECOND * Math.abs(speed)));
+
+        if (period <= 0L) return 0.0F;
+
+        float angle = Util.getMeasuringTimeMs() % period / (float) period * FULL_TURN;
+
+        return speed < 0.0F ? -angle : angle;
+    }
+
+    public static Quaternionf spinRotation(Direction.Axis axis, float speed) {
+        float angle = spinAngle(speed) * DEGREES;
+
+        if (axis == Direction.Axis.X) return new Quaternionf().rotateX(angle);
+        if (axis == Direction.Axis.Z) return new Quaternionf().rotateZ(angle);
+
+        return new Quaternionf().rotateY(angle);
+    }
+
     private static final float MIN_TEXT_SCALE = 0.05F;
 
     public static void enableScissor(DrawContext context, int startX, int startY, int endX, int endY) {

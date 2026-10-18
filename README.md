@@ -35,11 +35,14 @@ All extend `GuiObject`. Coordinates are relative to the GUI's top-left corner.
 | `TextObject` | Text, with `Align` / `VerticalAlign` inside a box | — |
 | `TextureObject` | A texture | — |
 | `ItemRenderObject` | An `ItemStack` with count, optional vanilla item tooltip | — |
+| `ModelItemRenderObject` | An item's 3D model, spinning, with a fixed tilt | — |
+| `EntityGuiObject` | A live entity, scaled to fit, optionally cursor-tracking | — |
 | `ButtonObject` | Clickable, `Runnable onPress` | — |
 | `ToggleObject` | On/off, two textures | `boolean` |
 | `RadioButtonObject` | One group, exclusive options | `String` |
 | `DropdownObject` | Vector-drawn expanding list, scrolls past `maxVisibleOptions` | `String` |
 | `TextFieldObject` | Text input | `String` |
+| `TextAreaObject` | Multi-line text input | `String` |
 | `BoxObject` | Container, clips and scrolls its children | — |
 | `ScrollBarObject` | Bar owned by a `BoxObject` | — |
 
@@ -87,7 +90,7 @@ GuiNetwork.open(player, id, new GuiData().set("price", 2000).set("sound", true))
 ClientPlayNetworking.send(new GuiValuesPayload(id, gui.collectValues()));
 ```
 
-An object picks up the entry matching **its own id** via `applyData`, and writes it back via `collectData`. `ItemRenderObject` also reads `<id>.count`.
+An object picks up the entry matching **its own id** via `applyData`, and writes it back via `collectData`. `ItemRenderObject` and `ModelItemRenderObject` also read `<id>.count`.
 
 Defaults are applied first, then server data — so an id absent from the payload leaves the default alone.
 

@@ -177,7 +177,19 @@ new TextObject("price", text, 8, 20, 60, 10, Align.CENTER)
 new TextObject("price", text, 8, 20, 60, 10, Align.CENTER, VerticalAlign.MIDDLE)
 ```
 
+`setAlign(...)` and `setVerticalAlign(...)` also set them after construction.
+
 Aligns inside the declared box, accounting for `textSize` and measured width. Vertical centring uses an optical line height of **7px**, matching vanilla (`(height - 9) / 2 + 1`). With no size given, the widget measures itself and alignment is a no-op.
+
+**Auto-size and wrapping.** When the `TextWithDetail` scale is `TextWithDetail.AUTO` **and** the object declares both a width and a height, `TextObject` wraps the text over multiple lines and shrinks it until the block fits the box:
+
+```java
+new TextObject("blurb", new TextWithDetail(Text.literal("a long sentence")), 8, 20, 90, 40, Align.CENTER)
+```
+
+It tries scales from **100% down to 30% in 5% steps**, re-wrapping at each one, and takes the first that fits on both axes; if nothing fits it settles at 30% and wraps there. The chosen layout is cached per `Text` instance, so the search runs again only when the text changes — not every frame.
+
+Without a size, or with an explicit scale, the text is a single unwrapped line as before.
 
 `applyData` replaces the text with the entry matching its id. No `collectData`.
 
@@ -186,7 +198,37 @@ Aligns inside the declared box, accounting for `textSize` and measured width. Ve
 ```java
 new TextureObject("frame", texture, 8, 20)              // size from the texture region
 new TextureObject("frame", texture, 8, 20, 64, 32)      // stretched (use nine-slice)
+new TextureObject("icon", texture, 8, 20, 24, 24).fitToSize();
 ```
+
+| Method | Default | Effect |
+|---|---|---|
+| `fitToSize()` / `fitToSize(boolean)` | off | Scale the texture to fit the object box **without distorting it**, then centre it |
+
+Without it the texture region is stretched to the object size, which changes its proportions. `fitToSize()` instead scales by whichever axis runs out of room first and centres the remainder:
+
+```
+scale      = min(objectSizeX / drawSizeX, objectSizeY / drawSizeY)
+drawn size = round(drawSize * scale), floored at 1px
+offset     = (objectSize - drawn size) / 2
+```
+
+A 6x14 texture in a 5x7 box gives `min(5/6, 7/14) = 0.5` → drawn **3x7** at offset `(1, 0)` — full height, 1px of slack either side.
+
+```
+object box 5x7        texture drawn 3x7
+┌─────┐               ┌─────┐
+│     │               │ ███ │   centred on the axis with slack
+│     │      ->       │ ███ │
+│     │               │ ███ │
+└─────┘               └─────┘
+```
+
+`getDrawSizeX/Y()` and `getDrawOffsetX/Y()` expose the result, and return the object size / `0` when fit is off. The **widget bounds stay the object rect**, so layout, hover and the label anchor are unaffected — only the texture shrinks inside.
+
+It scales **up** as well as down: fit fills the box on its tightest axis, so a box larger than the texture region enlarges it. Cap it with `Math.min(1.0f, scale)` in `getFitScale()` if you only ever want shrinking.
+
+Combining it with `setNineSlice(...)` is usually wrong — the fit picks a proportional destination size while nine-slice borders still draw 1:1, and nine-slice exists precisely to avoid uniform scaling.
 
 ### ItemRenderObject
 
@@ -199,6 +241,90 @@ new ItemRenderObject("reward", new ItemStack(Items.DIAMOND, 3), 40, 61, 0.5f)
 Draws the stack with its count overlay. `setShowItemTooltip(true)` shows the real vanilla item tooltip on hover without making the object clickable or focusable.
 
 `applyData` reads the item id from its own key and the count from `<id>.count` (`ItemRenderObject.COUNT_SUFFIX`), ignoring unknown or malformed item ids. No `collectData`.
+
+### ModelItemRenderObject
+
+Renders an item's 3D model, spinning, with a fixed tilt. Use it for a showcase or reward slot where you want to see the item from more than one face.
+
+```java
+new ModelItemRenderObject("trophy", frameTexture, new ItemStack(Items.DIAMOND_BLOCK), 8, 20, 40, 40)
+        .setTilt(20f, 0f, 0f);
+
+new ModelItemRenderObject("trophy", null, stack, 8, 20, 40, 40, Direction.Axis.Z, 2.0f);
+```
+
+| Method | Default | Effect |
+|---|---|---|
+| constructor `spinAxis, spinSpeed` | `Direction.Axis.Y`, `1.0f` | Which axis it turns around and how fast |
+| `setSpin(axis, speed)` | — | Same, after construction |
+| `setTilt(x, y, z)` | `0, 0, 0` | Resting pose, in **degrees** |
+| `setTransformationMode(...)` | `ModelTransformationMode.FIXED` | Which vanilla item transform to use |
+| `setStack(ItemStack)` | constructor value | Swap the item |
+
+**`ItemRenderObject` already renders the 3D model** — `DrawContext.drawItem` goes through `ItemRenderer` with `ModelTransformationMode.GUI`, which is why a block looks like a cube there. What GUI mode locks is the *angle*. This object exists to free that up, not to add a renderer.
+
+**Spin speed is a multiplier on 45°/second**, so `1.0f` is one full turn every 8 seconds and `2.0f` every 4. A speed of `1` degree per second would be invisible, hence the multiplier. Negative values reverse the direction, `0` stops it. The angle is derived from `Util.getMeasuringTimeMs() % period` in `long` space, so it stays exact however long the game has been running.
+
+**Tilt is applied after the spin**, so the item keeps its pose while turning around the chosen view axis — like a trophy on a turntable. Applying it the other way round would drag the spin axis along with the tilt.
+
+Scaling matches vanilla's `drawItem`: `translate(centre, 150)` then `scale(size, -size, size)` with `size = min(objectSizeX, objectSizeY) * 0.8`. Rendering is clipped to the object box, and depth lighting is left enabled — vanilla only disables it for flat models, and this is explicitly a 3D view.
+
+The `Texture` parameter is an optional frame drawn behind the item; pass `null` for none.
+
+`applyData` reads an item id from its own key and the count from `<id>.count`, the same convention as [`ItemRenderObject`](#itemrenderobject) — but note the count only sets the stack size, it is **not drawn**: `renderItem` renders the model alone, with no `drawItemInSlot` overlay. Use `ItemRenderObject` if you need the number on screen. Display-only, so no `collectData`.
+
+### EntityGuiObject
+
+Renders a live entity inside the object box, scaled to fit.
+
+```java
+new EntityGuiObject("pet", frameTexture, new PigEntity(EntityType.PIG, world), 8, 20, 48, 64)
+        .setTilt(0.0f, 180.0f, 0.0f);
+
+new EntityGuiObject("speeder", null, ModSpeederEntities.ZEPHYR_G.create(world), 9, 9, 60, 72)
+        .setSpin(Direction.Axis.Y, 1.0f)
+        .setTilt(-20.0f, 0.0f, 0.0f);
+
+new EntityGuiObject("preview", null, entity, 8, 20, 48, 64)
+        .canControlByMouse(true);
+```
+
+| Method | Default | Effect |
+|---|---|---|
+| `setEntity(Entity)` | constructor value | Swap the rendered entity |
+| `setTilt(x, y, z)` | `0, 0, 0` | Resting pose in **degrees** |
+| `setSpin(axis, speed)` | `Direction.Axis.Y`, `0.0f` | Continuous rotation — same unit as [`ModelItemRenderObject`](#modelitemrenderobject) |
+| `canControlByMouse(boolean)` | `false` | The entity tracks the cursor, overriding the spin |
+
+`setAngles(...)` still works and delegates to `setTilt(...)`.
+
+**Spin speed is a multiplier on 45°/second** (`UtilsWidgets.SPIN_DEGREES_PER_SECOND`), shared with `ModelItemRenderObject`: `1.0f` is one full turn every 8 seconds, negative reverses, `0` stops. The angle comes from `Util.getMeasuringTimeMs() % period` in `long` space so it stays exact over long uptime.
+
+**The default speed is `0`** — unlike `ModelItemRenderObject`, which always spins. An `EntityGuiObject` is static until you call `setSpin(...)`, so existing screens are unchanged.
+
+**Tilt is the outer rotation, spin the inner one** (`Z-flip · tilt · spin`), so the entity turns about its own axis while the viewing angle stays put, rather than the tilt being swept around with it. Same composition as `ModelItemRenderObject`.
+
+**Mouse control wins over spin.** `canControlByMouse(true)` makes the spin a no-op — the two would fight for the same rotation, so the interactive one takes precedence.
+
+The `Texture` parameter is an optional frame drawn behind the entity — pass `null` for none.
+
+**Scaling** is automatic and preserves proportions, the same idea as [`TextureObject.fitToSize()`](#textureobject):
+
+```
+size = min(objectSizeY / entity.getHeight(), objectSizeX / max(entity.getWidth(), 0.1)) * 0.8
+```
+
+The `0.8` margin keeps a tall or wide entity off the edges, and the entity is anchored by its centre (`height / 2`). Width is clamped to `0.1`, so a zero-width entity (a marker armour stand, a display entity) still renders rather than dividing by zero. Height is **not** clamped — an entity with a height of `0` is skipped entirely and draws nothing.
+
+Rendering is clipped to the object box via `UtilsWidgets.enableScissor`, so an entity that overflows is cut at the border rather than drawn over the rest of the GUI.
+
+**Mouse control** (`canControlByMouse(true)`) derives yaw and pitch from the cursor's offset from the box centre, through `atan(offset / 40)`. `setAngles(...)` is ignored in that mode — the two are alternatives, not additive.
+
+**Living vs non-living** entities take different paths. A `LivingEntity` goes through `InventoryScreen.drawEntity`, which needs `bodyYaw`, `yaw`, `pitch`, `headYaw` and `prevHeadYaw` set for the pose; the widget **saves and restores all five** around the call, so posing a real world entity for display doesn't corrupt its actual rotation. Anything else is drawn directly through `EntityRenderDispatcher` with shadows disabled.
+
+> The entity instance is rendered, not copied. Pointing this at a live world entity means its model, equipment and animation state are shared — and on the client you need a `World` to construct a standalone one.
+
+Display-only: `active = false` and `isMouseOver` returns `false`, so it never takes clicks or focus. No value, so no `applyData` / `collectData`.
 
 ### ButtonObject
 
@@ -337,7 +463,11 @@ for (int i = 0; i < 20; i++) {
 
 Child coordinates are relative to the **box** origin. Content height is measured from the children, and a scroll bar appears only when it overflows. Boxes nest — scroll offsets and clipping compose.
 
-`getScrollBar()` lazily creates a default `ScrollBarObject` (`<boxId>_scroll_bar`); `setScrollBar(...)` replaces it.
+`setStartAtEnd(true)` opens the box scrolled to the **bottom** instead of the top — the usual choice for a log or chat-style list where the newest entry is last. It forwards to the scroll bar, so it survives a resize like any other scroll position and resets on reopening.
+
+`withoutScrollBar()` hides the bar. **The box still scrolls with the wheel** — only the bar's rendering and its click/drag handling are skipped, so the scroll position, `setStartAtEnd(...)` and nested-box behaviour are unaffected. Use it for a list you scroll with the wheel but don't want a visible track on.
+
+`getScrollBar()` lazily creates a default `ScrollBarObject` (`<boxId>_scroll_bar`); `setScrollBar(...)` replaces it. `setScrollStep(...)` sets the pixels moved per wheel notch (default `9`).
 
 ### ScrollBarObject
 
@@ -391,13 +521,17 @@ color.getHexColor()        // ARGB int for DrawContext
 Text plus colour and scale.
 
 ```java
-new TextWithDetail(Text.literal("Hi"))
+new TextWithDetail(Text.literal("Hi"))                        // scale AUTO
 new TextWithDetail(Text.literal("Hi"), 0.5f)
-new TextWithDetail(Text.literal("Hi"), ColorHelper.RED)
+new TextWithDetail(Text.literal("Hi"), ColorHelper.RED)       // scale AUTO
 new TextWithDetail(Text.literal("Hi"), ColorHelper.RED, 0.5f)
 ```
 
 Scale applies via the matrix stack. **Hitboxes are not scaled** except in `TextObject`, which measures itself.
+
+**`TextWithDetail.AUTO`** (`0.0f`) means "let the object decide". The two constructors that take no scale default to it, and `isAutoSize()` reports it — any scale `<= 0` counts.
+
+Only `TextObject` acts on it, by wrapping and shrinking to its box (see [TextObject](#textobject)). Everywhere else `getTextSize()` reports `1.0f` for an auto value, so a label or button text behaves exactly as it did before.
 
 ### Align / VerticalAlign
 
@@ -685,7 +819,7 @@ Values live on the **object**, not the widget. That decides when they survive:
 
 `resetState()` runs from the `GuiRenderer` constructor — once per screen instance, not per `init()`. The game calls `init()` for both opening and resizing, so it can't tell them apart; the constructor can.
 
-Stateful: `ToggleObject` (boolean), `TextFieldObject`, `TextAreaObject`, `RadioButtonObject`, `DropdownObject` (String + scroll), `ScrollBarObject` (scroll), `ItemRenderObject` (stack).
+Stateful: `ToggleObject` (boolean), `TextFieldObject`, `TextAreaObject`, `RadioButtonObject`, `DropdownObject` (String + scroll), `ScrollBarObject` (scroll), `ItemRenderObject` (stack), `ModelItemRenderObject` (stack).
 
 A registered `Gui` is a **shared instance**. That's fine on a client with one screen at a time, but it is not re-entrant, and `setData` overwrites the previous opening's data.
 

@@ -10,6 +10,7 @@ public enum ObjectType {
     TEXT_FIELD,
     TEXT_AREA,
     ITEM_RENDER,
+    MODEL_ITEM_RENDER,
     RADIO_BUTTON,
     TEXTURE,
     ENTITY

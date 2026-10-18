@@ -67,10 +67,16 @@ public class EntityWidget extends ClickableWidget {
         context.disableScissor();
     }
 
+    private Quaternionf getSpinRotation() {
+        if (guiObject.isControlByMouse()) return new Quaternionf();
+
+        return UtilsWidgets.spinRotation(guiObject.getSpinAxis(), guiObject.getSpinSpeed());
+    }
+
     private Quaternionf getCameraRotation(float pitch) {
         if (guiObject.isControlByMouse()) return new Quaternionf().rotateX(pitch * 20.0F * DEGREES);
 
-        return new Quaternionf().rotationXYZ(guiObject.getAngleX() * DEGREES, guiObject.getAngleY() * DEGREES, guiObject.getAngleZ() * DEGREES);
+        return new Quaternionf().rotationXYZ(guiObject.getTiltX() * DEGREES, guiObject.getTiltY() * DEGREES, guiObject.getTiltZ() * DEGREES);
     }
 
     private void renderLiving(DrawContext context, LivingEntity entity, float centerX, float centerY, float size, Vector3f offset, float yaw, float pitch) {
@@ -80,7 +86,7 @@ public class EntityWidget extends ClickableWidget {
         float prevHeadYaw = entity.prevHeadYaw;
         float headYaw = entity.headYaw;
         Quaternionf camera = getCameraRotation(pitch);
-        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera);
+        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera).mul(getSpinRotation());
 
         entity.bodyYaw = 180.0F + yaw * 20.0F;
         entity.setYaw(180.0F + yaw * MOUSE_SENSITIVITY);
@@ -99,7 +105,7 @@ public class EntityWidget extends ClickableWidget {
 
     private void renderEntity(DrawContext context, Entity entity, float centerX, float centerY, float size, Vector3f offset, float yaw, float pitch) {
         Quaternionf camera = getCameraRotation(pitch);
-        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera);
+        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera).mul(getSpinRotation());
 
         if (guiObject.isControlByMouse()) rotation.rotateY(-yaw * MOUSE_SENSITIVITY * DEGREES);
 

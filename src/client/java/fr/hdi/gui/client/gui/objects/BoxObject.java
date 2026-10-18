@@ -12,6 +12,7 @@ public class BoxObject extends GuiObject {
     private List<GuiObject> objects = new ArrayList<>();
     private int scrollStep = 9;
     private ScrollBarObject scrollBar;
+    private boolean scrollBarVisible = true;
 
     public BoxObject(String id, Texture texture, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY) {
         super(id, ObjectType.BOX, texture, null, objectStartX, objectStartY, objectSizeX, objectSizeY);
@@ -40,6 +41,20 @@ public class BoxObject extends GuiObject {
         this.scrollBar.setOwner(this);
 
         return this;
+    }
+
+    public BoxObject withoutScrollBar() {
+        return withoutScrollBar(true);
+    }
+
+    public BoxObject withoutScrollBar(boolean withoutScrollBar) {
+        this.scrollBarVisible = !withoutScrollBar;
+
+        return this;
+    }
+
+    public boolean hasScrollBar() {
+        return scrollBarVisible;
     }
 
     public BoxObject setStartAtEnd(boolean startAtEnd) {

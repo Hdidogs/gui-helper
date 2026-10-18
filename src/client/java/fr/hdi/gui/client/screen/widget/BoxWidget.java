@@ -89,7 +89,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
         context.getMatrices().pop();
         context.disableScissor();
 
-        scrollBar.render(context, mouseX, mouseY, delta);
+        if (guiObject.hasScrollBar()) scrollBar.render(context, mouseX, mouseY, delta);
     }
 
     @Override
@@ -161,7 +161,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!active || !visible || !isMouseOver(mouseX, mouseY)) return false;
 
-        if (scrollBar.mouseClicked(mouseX, mouseY, button)) {
+        if (guiObject.hasScrollBar() && scrollBar.mouseClicked(mouseX, mouseY, button)) {
             setFocused((Element) null);
 
             return true;
@@ -182,7 +182,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        boolean handled = scrollBar.mouseReleased(mouseX, mouseY, button);
+        boolean handled = guiObject.hasScrollBar() && scrollBar.mouseReleased(mouseX, mouseY, button);
 
         for (ClickableWidget widget : widgets) {
             if (widget.visible && widget.mouseReleased(mouseX, mouseY + getScrollY(), button)) handled = true;
@@ -193,7 +193,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (scrollBar.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
+        if (guiObject.hasScrollBar() && scrollBar.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
 
         return getFocused() != null && getFocused().mouseDragged(mouseX, mouseY + getScrollY(), button, deltaX, deltaY);
     }

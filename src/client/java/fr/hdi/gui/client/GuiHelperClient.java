@@ -19,6 +19,7 @@ import java.util.List;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 
@@ -60,7 +61,7 @@ public class GuiHelperClient implements ClientModInitializer {
                 box.addObject(new TextObject("line_" + index, new TextWithDetail(Text.literal("Line " + index), ColorHelper.WHITE, 0.5f), 2, 2 + index * 10));
             }
 
-            BoxObject innerBox = new BoxObject("inner_list", null, 40, 4, 50, 30);
+            BoxObject innerBox = new BoxObject("inner_list", null, 40, 4, 50, 30).setStartAtEnd(true).withoutScrollBar();
 
             for (int index = 0; index < 8; index++) {
                 innerBox.addObject(new TextObject("inner_line_" + index, new TextWithDetail(Text.literal("Inner " + index), ColorHelper.RED, 0.5f), 2, 2 + index * 10));
@@ -89,7 +90,18 @@ public class GuiHelperClient implements ClientModInitializer {
 
             dropdown.setLabel(new TextWithDetail(Text.literal("Difficulty"), 0.5f));
 
-            gui.addObject(dropdown).addObject(button).addObject(textField).addObject(textArea).addObject(textObject).addObject(itemRender).addObject(toggleObject).addObject(box);
+            TextureObject fittedTexture = new TextureObject("fit_on", Textures.TEXTURE_TOGGLE_ON, 112, 5, 24, 24).fitToSize();
+            TextureObject stretchedTexture = new TextureObject("fit_off", Textures.TEXTURE_TOGGLE_ON, 112, 33, 24, 24);
+
+            fittedTexture.setLabel(new TextWithDetail(Text.literal("fit"), 0.5f));
+            stretchedTexture.setLabel(new TextWithDetail(Text.literal("stretch"), 0.5f));
+
+            ModelItemRenderObject modelItem = new ModelItemRenderObject("model_item", null, new ItemStack(Items.DIAMOND_BLOCK), 115, 118, 40, 40)
+                    .setTilt(20.0f, 0.0f, 0.0f);
+
+            modelItem.setLabel(new TextWithDetail(Text.literal("3D"), 0.5f));
+
+            gui.addObject(dropdown).addObject(button).addObject(textField).addObject(textArea).addObject(textObject).addObject(itemRender).addObject(toggleObject).addObject(box).addObject(fittedTexture).addObject(stretchedTexture).addObject(modelItem);
 
             gui.setBuilder(built -> {
                 BoxObject list = built.getObject("list", BoxObject.class);

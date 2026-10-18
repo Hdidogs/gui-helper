@@ -24,7 +24,7 @@ public class TextureRenderWidget extends ClickableWidget {
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
-        UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
+        UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX() + guiObject.getDrawOffsetX(), getY() + guiObject.getDrawOffsetY(), guiObject.getDrawSizeX(), guiObject.getDrawSizeY());
     }
 
     @Override

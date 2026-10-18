@@ -5,13 +5,16 @@ import fr.hdi.gui.client.screen.widget.EntityWidget;
 import fr.hdi.gui.utils.Texture;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Direction;
 
 public class EntityGuiObject extends GuiObject {
     private Entity entity;
     private boolean controlByMouse;
-    private float angleX;
-    private float angleY;
-    private float angleZ;
+    private float tiltX;
+    private float tiltY;
+    private float tiltZ;
+    private Direction.Axis spinAxis = Direction.Axis.Y;
+    private float spinSpeed;
 
     public EntityGuiObject(String id, Texture texture, Entity entity, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY) {
         super(id, ObjectType.ENTITY, texture, null, objectStartX, objectStartY, objectSizeX, objectSizeY);
@@ -38,22 +41,41 @@ public class EntityGuiObject extends GuiObject {
         return this;
     }
 
-    public float getAngleX() {
-        return angleX;
+    public float getTiltX() {
+        return tiltX;
     }
 
-    public float getAngleY() {
-        return angleY;
+    public float getTiltY() {
+        return tiltY;
     }
 
-    public float getAngleZ() {
-        return angleZ;
+    public float getTiltZ() {
+        return tiltZ;
+    }
+
+    public EntityGuiObject setTilt(float tiltX, float tiltY, float tiltZ) {
+        this.tiltX = tiltX;
+        this.tiltY = tiltY;
+        this.tiltZ = tiltZ;
+
+        return this;
     }
 
     public EntityGuiObject setAngles(float angleX, float angleY, float angleZ) {
-        this.angleX = angleX;
-        this.angleY = angleY;
-        this.angleZ = angleZ;
+        return setTilt(angleX, angleY, angleZ);
+    }
+
+    public Direction.Axis getSpinAxis() {
+        return spinAxis;
+    }
+
+    public float getSpinSpeed() {
+        return spinSpeed;
+    }
+
+    public EntityGuiObject setSpin(Direction.Axis spinAxis, float spinSpeed) {
+        this.spinAxis = spinAxis;
+        this.spinSpeed = spinSpeed;
 
         return this;
     }
