@@ -102,6 +102,13 @@ public class CustomScreen extends Screen {
     }
 
     @Override
+    public void removed() {
+        super.removed();
+
+        gui.fireClosed();
+    }
+
+    @Override
     public boolean shouldCloseOnEsc() {
         return gui.shouldCloseOnEsc();
     }

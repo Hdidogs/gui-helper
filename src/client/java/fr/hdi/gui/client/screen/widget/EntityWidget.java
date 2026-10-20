@@ -46,35 +46,37 @@ public class EntityWidget extends ClickableWidget {
 
         float centerX = getX() + getWidth() / 2.0F;
         float centerY = getY() + getHeight() / 2.0F;
-        float size = Math.min(getHeight() / entity.getHeight(), getWidth() / Math.max(entity.getWidth(), 0.1F)) * FIT_MARGIN;
+        float size = Math.min(getHeight() / entity.getHeight(), getWidth() / Math.max(entity.getWidth(), 0.1F)) * FIT_MARGIN * guiObject.getEntityScale();
         Vector3f offset = new Vector3f(0.0F, entity.getHeight() / 2.0F, 0.0F);
-        float yaw = 0.0F;
-        float pitch = 0.0F;
-
-        if (guiObject.isControlByMouse()) {
-            yaw = (float) Math.atan((centerX - mouseX) / MOUSE_SENSITIVITY);
-            pitch = (float) Math.atan((centerY - mouseY) / MOUSE_SENSITIVITY);
-        }
+        float yaw = isMouseDriven() ? (float) Math.atan((centerX - mouseX) / MOUSE_SENSITIVITY) : 0.0F;
+        float pitch = isMouseDriven() ? (float) Math.atan((centerY - mouseY) / MOUSE_SENSITIVITY) : 0.0F;
+        Runnable draw = entity instanceof LivingEntity living
+                ? () -> renderLiving(context, living, centerX, centerY, size, offset, yaw, pitch)
+                : () -> renderEntity(context, entity, centerX, centerY, size, offset, yaw, pitch);
 
         UtilsWidgets.enableScissor(context, getX(), getY(), getX() + getWidth(), getY() + getHeight());
 
-        if (entity instanceof LivingEntity living) {
-            renderLiving(context, living, centerX, centerY, size, offset, yaw, pitch);
+        if (guiObject.getRenderWrapper() != null) {
+            guiObject.getRenderWrapper().accept(draw);
         } else {
-            renderEntity(context, entity, centerX, centerY, size, offset, yaw, pitch);
+            draw.run();
         }
 
         context.disableScissor();
     }
 
+    private boolean isMouseDriven() {
+        return guiObject.isControlByMouse() && !guiObject.hasEntityYaw();
+    }
+
     private Quaternionf getSpinRotation() {
-        if (guiObject.isControlByMouse()) return new Quaternionf();
+        if (guiObject.isControlByMouse() || guiObject.hasEntityYaw()) return new Quaternionf();
 
         return UtilsWidgets.spinRotation(guiObject.getSpinAxis(), guiObject.getSpinSpeed());
     }
 
     private Quaternionf getCameraRotation(float pitch) {
-        if (guiObject.isControlByMouse()) return new Quaternionf().rotateX(pitch * 20.0F * DEGREES);
+        if (isMouseDriven()) return new Quaternionf().rotateX(pitch * 20.0F * DEGREES);
 
         return new Quaternionf().rotationXYZ(guiObject.getTiltX() * DEGREES, guiObject.getTiltY() * DEGREES, guiObject.getTiltZ() * DEGREES);
     }
@@ -88,8 +90,8 @@ public class EntityWidget extends ClickableWidget {
         Quaternionf camera = getCameraRotation(pitch);
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera).mul(getSpinRotation());
 
-        entity.bodyYaw = 180.0F + yaw * 20.0F;
-        entity.setYaw(180.0F + yaw * MOUSE_SENSITIVITY);
+        entity.bodyYaw = guiObject.hasEntityYaw() ? guiObject.getEntityYaw() : 180.0F + yaw * 20.0F;
+        entity.setYaw(guiObject.hasEntityYaw() ? guiObject.getEntityYaw() : 180.0F + yaw * MOUSE_SENSITIVITY);
         entity.setPitch(-pitch * 20.0F);
         entity.headYaw = entity.getYaw();
         entity.prevHeadYaw = entity.getYaw();
@@ -107,7 +109,8 @@ public class EntityWidget extends ClickableWidget {
         Quaternionf camera = getCameraRotation(pitch);
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera).mul(getSpinRotation());
 
-        if (guiObject.isControlByMouse()) rotation.rotateY(-yaw * MOUSE_SENSITIVITY * DEGREES);
+        if (guiObject.hasEntityYaw()) rotation.rotateY((180.0F - guiObject.getEntityYaw()) * DEGREES);
+        else if (guiObject.isControlByMouse()) rotation.rotateY(-yaw * MOUSE_SENSITIVITY * DEGREES);
 
         context.getMatrices().push();
         context.getMatrices().translate(centerX, centerY, 50.0F);

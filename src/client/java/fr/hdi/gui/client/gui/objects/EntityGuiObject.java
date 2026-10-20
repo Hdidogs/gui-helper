@@ -7,6 +7,8 @@ import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Direction;
 
+import java.util.function.Consumer;
+
 public class EntityGuiObject extends GuiObject {
     private Entity entity;
     private boolean controlByMouse;
@@ -15,6 +17,10 @@ public class EntityGuiObject extends GuiObject {
     private float tiltZ;
     private Direction.Axis spinAxis = Direction.Axis.Y;
     private float spinSpeed;
+    private float entityScale = 1.0F;
+    private boolean fixedYaw;
+    private float entityYaw;
+    private Consumer<Runnable> renderWrapper;
 
     public EntityGuiObject(String id, Texture texture, Entity entity, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY) {
         super(id, ObjectType.ENTITY, texture, null, objectStartX, objectStartY, objectSizeX, objectSizeY);
@@ -63,6 +69,47 @@ public class EntityGuiObject extends GuiObject {
 
     public EntityGuiObject setAngles(float angleX, float angleY, float angleZ) {
         return setTilt(angleX, angleY, angleZ);
+    }
+
+    public float getEntityScale() {
+        return entityScale;
+    }
+
+    public EntityGuiObject setEntityScale(float entityScale) {
+        this.entityScale = Math.max(0.0F, entityScale);
+
+        return this;
+    }
+
+    public boolean hasEntityYaw() {
+        return fixedYaw;
+    }
+
+    public float getEntityYaw() {
+        return entityYaw;
+    }
+
+    public EntityGuiObject setEntityYaw(float entityYaw) {
+        this.entityYaw = entityYaw;
+        this.fixedYaw = true;
+
+        return this;
+    }
+
+    public EntityGuiObject clearEntityYaw() {
+        this.fixedYaw = false;
+
+        return this;
+    }
+
+    public Consumer<Runnable> getRenderWrapper() {
+        return renderWrapper;
+    }
+
+    public EntityGuiObject setRenderWrapper(Consumer<Runnable> renderWrapper) {
+        this.renderWrapper = renderWrapper;
+
+        return this;
     }
 
     public Direction.Axis getSpinAxis() {

@@ -44,7 +44,7 @@ public class GuiRenderer {
     }
 
     private float computeSizeMultiplicator(int screenWidth, int screenHeight) {
-        if (!gui.isFitToWindow()) return gui.getSizeMultiplicator();
+        if (!gui.isFitToWindow() || gui.isFullWindow()) return gui.getSizeMultiplicator();
 
         int sizeX = gui.getSizeX();
         int sizeY = gui.getSizeY();
@@ -58,10 +58,11 @@ public class GuiRenderer {
 
     public void init(int screenWidth, int screenHeight, Consumer<ClickableWidget> adder) {
         this.sizeMultiplicator = computeSizeMultiplicator(screenWidth, screenHeight);
-        this.guiX = (int) (screenWidth / sizeMultiplicator - gui.getSizeX()) / 2;
-        this.guiY = (int) (screenHeight / sizeMultiplicator - gui.getSizeY()) / 2;
+        this.guiX = gui.isFullWindow() ? 0 : (int) (screenWidth / sizeMultiplicator - gui.getSizeX()) / 2;
+        this.guiY = gui.isFullWindow() ? 0 : (int) (screenHeight / sizeMultiplicator - gui.getSizeY()) / 2;
 
         for (GuiObject object : gui.getObjects()) {
+            object.resolveAnchor(gui.getSizeX(), gui.getSizeY());
             adder.accept(object.register(this.guiX, this.guiY));
         }
     }
@@ -129,6 +130,6 @@ public class GuiRenderer {
     }
 
     public void drawBackground(DrawContext context) {
-        if (gui.hasBackground()) UtilsWidgets.drawTexture(context, gui.getBackground(), guiX, guiY, gui.getSizeX(), gui.getSizeY());
+        if (gui.hasBackground() && !gui.isFullWindow()) UtilsWidgets.drawTexture(context, gui.getBackground(), guiX, guiY, gui.getSizeX(), gui.getSizeY());
     }
 }

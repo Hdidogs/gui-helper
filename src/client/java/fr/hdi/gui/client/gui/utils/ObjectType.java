@@ -13,5 +13,6 @@ public enum ObjectType {
     MODEL_ITEM_RENDER,
     RADIO_BUTTON,
     TEXTURE,
-    ENTITY
+    ENTITY,
+    STEPPER
 }

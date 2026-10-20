@@ -24,6 +24,8 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
         this.guiObject = object;
 
         for (GuiObject child : object.getObjects()) {
+            child.resolveAnchor(getWidth(), getHeight());
+
             ClickableWidget widget = child.register(getX(), getY());
 
             if (widget == null) continue;

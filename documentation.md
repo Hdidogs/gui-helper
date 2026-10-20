@@ -99,6 +99,8 @@ Gui gui = new Gui()
 | `setBlur(boolean)` / `activeBlur()` | `true` | Background blur |
 | `setShouldPause(boolean)` | `false` | Pause singleplayer |
 | `setShouldCloseOnEsc(boolean)` | `true` | ESC closes the screen |
+| `setFullWindow(boolean)` | `false` | GUI size = window size — see below |
+| `setOnClosed(Runnable)` | none | Runs from `Screen.removed()` — see below |
 
 ### Objects and values
 
@@ -129,6 +131,18 @@ clamped to `0.1f .. maxSizeMultiplicator`. The result lives on the **`GuiRendere
 
 `init()` runs on opening **and** on every window resize, so the GUI re-fits as the window changes. It needs a real size: with no background and no `setSize(...)`, `getSizeX()` is `0` and fit mode falls back to the fixed multiplier.
 
+### Full window
+
+```java
+gui.setFullWindow(true);
+```
+
+`getSizeX()` / `getSizeY()` return the scaled window size divided by the size multiplier, re-read on every `init()`, so a resize re-resolves every anchor. The origin `(0, 0)` is the screen's top-left, nothing is centred, the background texture is **not** drawn, and `setFitToWindow(...)` is ignored — the multiplier stays `getSizeMultiplicator()`. Combine with [anchors](#anchors-and-fill).
+
+### On closed
+
+`setOnClosed(Runnable)` runs every time the screen is removed: `ESC`, `GuiRegistry.close()`, another screen replacing it — **including** `GuiRegistry.open(...)` on the GUI that is already open, which removes the old screen before the new one inits. A window resize does **not** fire it.
+
 Fit mode makes a **non-integer** multiplier the normal case, including values below `1.0f` when the GUI is larger than the window. Both screen types already divide every mouse entry point by the multiplier and place slots in the same scaled space, so picking follows rendering — see [§11](#11-rendering-internals).
 
 ---
@@ -152,6 +166,42 @@ object.setShowWhen(toggle::getValue);
 | `isShown()` | Evaluates the supplier |
 | `getWidget()` | The live `ClickableWidget`, or `null` before `init()` |
 | `getObjectStartX/Y()`, `getObjectSizeX/Y()` | Position and size |
+
+### Anchors and fill
+
+```java
+new ButtonObject("play", texture, text, 10, 10, 22, 11, this::play)
+        .setAnchor(Anchor.BOTTOM_RIGHT);
+
+new BoxObject("bars", texture, 10, 25, 91, 0)
+        .setAnchor(Anchor.TOP_RIGHT)
+        .setFillY(27);
+```
+
+| Method | Default | Effect |
+|---|---|---|
+| `setAnchor(Anchor)` | `TOP_LEFT` | Corner / edge the offset is measured from |
+| `setFillX(int endMargin)` / `setFillY(int endMargin)` | off | Size becomes `C - offset - endMargin`, clamped to `≥ 0` |
+| `getAnchoredX/Y()` | — | Resolved position (same as `getObjectStartX/Y()` once resolved) |
+| `isAnchored()` | `false` | `true` after the first resolution |
+
+`Anchor` (`fr.hdi.gui.utils`): `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `MIDDLE_LEFT`, `CENTER`, `MIDDLE_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`.
+
+`C` is the container size: the `Gui` (`getSizeX/Y()`), or the enclosing `BoxObject`. Per axis:
+
+| Edge | Resolved |
+|---|---|
+| `LEFT` / `TOP` | `offset` |
+| `CENTER` / `MIDDLE` | `(C - size) / 2 + offset` |
+| `RIGHT` / `BOTTOM` | `C - size - offset` |
+
+The offset always points **inward**; negative values are allowed (`BOTTOM_CENTER` at `-6` / `+6` puts two arrows either side of the centre). Fill is computed first, then the anchor uses the filled size.
+
+Resolution runs in `GuiRenderer.init()` and in the `BoxWidget` constructor, right before each object's `register(bgX, bgY)`, so every resize re-resolves. From then on `getObjectStartX/Y()` and `getObjectSizeX/Y()` return the **resolved** values — read them back for decoration. With `TOP_LEFT` and no fill the resolved values equal the constructor values, so existing GUIs are unchanged.
+
+`size` is `getObjectSizeX/Y()` as given to the constructor: an auto-sized `TextObject` (size `0`) anchors as a zero-size box.
+
+`setAnchor` / `setFillX` / `setFillY` return `GuiObject`; call subclass setters first in a chain.
 
 `setShowWhen(false)` hides the widget **and** disables its input — it sets `widget.visible`, which `ClickableWidget.mouseClicked` checks.
 
@@ -294,7 +344,23 @@ new EntityGuiObject("preview", null, entity, 8, 20, 48, 64)
 | `setEntity(Entity)` | constructor value | Swap the rendered entity |
 | `setTilt(x, y, z)` | `0, 0, 0` | Resting pose in **degrees** |
 | `setSpin(axis, speed)` | `Direction.Axis.Y`, `0.0f` | Continuous rotation — same unit as [`ModelItemRenderObject`](#modelitemrenderobject) |
+| `setEntityScale(float)` | `1.0f` | Resize the model inside the box, without moving or resizing the object |
 | `canControlByMouse(boolean)` | `false` | The entity tracks the cursor, overriding the spin |
+| `setEntityYaw(float)` / `getEntityYaw()` | off | Fixed model yaw in degrees — overrides mouse and spin |
+| `clearEntityYaw()` | — | Back to mouse / spin |
+| `setRenderWrapper(Consumer<Runnable>)` | none | Wraps every draw: the framework calls `wrapper.accept(draw)` |
+
+**Entity yaw** sets `bodyYaw`, `yaw`, `headYaw` and `prevHeadYaw` to the value for the draw (pitch `0`), restored afterwards. It turns the **model**, not the camera, so the light stays fixed. `180` faces the viewer, as the default pose does. Non-living entities get the equivalent model rotation. Precedence: `setEntityYaw` > `canControlByMouse` > `setSpin`; `setTilt` still applies as the camera.
+
+```java
+preview.setEntityYaw(180.0f)
+        .setRenderWrapper(draw -> {
+            SpeciesFeatureRenderer.setPreviewOverride(entry);
+            try { draw.run(); } finally { SpeciesFeatureRenderer.clearPreviewOverride(); }
+        });
+```
+
+The wrapper runs inside the scissor; not calling `draw.run()` skips the entity.
 
 `setAngles(...)` still works and delegates to `setTilt(...)`.
 
@@ -313,6 +379,8 @@ The `Texture` parameter is an optional frame drawn behind the entity — pass `n
 ```
 size = min(objectSizeY / entity.getHeight(), objectSizeX / max(entity.getWidth(), 0.1)) * 0.8
 ```
+
+`setEntityScale(...)` multiplies that result, so `1.0f` is the auto-fit, `1.5f` is half again as big and `0.5f` is half size. The object's own position and size are untouched — only the model grows or shrinks inside the box, anchored on its centre. Scaling past the box is allowed and simply gets clipped by the scissor, which is the usual way to crop a tall entity down to a portrait. Negative values are clamped to `0`.
 
 The `0.8` margin keeps a tall or wide entity off the edges, and the entity is anchored by its centre (`height / 2`). Width is clamped to `0.1`, so a zero-width entity (a marker armour stand, a display entity) still renders rather than dividing by zero. Height is **not** clamped — an entity with a height of `0` is skipped entirely and draws nothing.
 
@@ -340,6 +408,18 @@ new ButtonObject("close", texture, new TextWithDetail(Text.literal("X"), 0.7f), 
 | `setHoverAnimation(boolean)` | `true` | 1px lift on hover |
 | `setEnableWhen(BooleanSupplier)` | always on | Disabled ⇒ 50% opacity on texture **and** text, no hover lift, clicks blocked |
 | `setTextBox(x, y, sizeX, sizeY)` | the object rect | Centre the text in this box instead of the whole button |
+| `setIcon(Texture, sizeX, sizeY)` | none | Icon stretched to `sizeX × sizeY`, centred, drawn over the texture |
+| `setOnHold(FloatConsumer)` | none | Fires every frame while held — see below |
+
+The icon follows the hover lift and the disabled opacity.
+
+**Hold.** After a left click on the button, `onHold.accept(delta)` fires every frame while the left mouse button stays down **and** the cursor is over the button (leaving pauses it, coming back resumes). `delta` is the render delta (`getLastFrameDuration()`, in ticks), so `yaw -= 6.0f * delta` is 120°/s. `onPress` still fires **once** on the click; passing `null` for `onPress` is allowed.
+
+```java
+new ButtonObject("rotate_left", arrowLeft, null, -6, 20, 8, 11, null)
+        .setOnHold(delta -> yaw -= 6.0f * delta)
+        .setAnchor(Anchor.BOTTOM_CENTER);
+```
 
 `setTextBox(...)` takes the same relative box as [`TextFieldObject`](#textfieldobject): the text is centred inside it rather than over the full button, and **shrinks to fit** it — see [Fitting text to a box](#fitting-text-to-a-box). The box moves with the hover lift. Unlike the text field it does **not** clip; oversized text is scaled down rather than cut.
 
@@ -351,6 +431,32 @@ new ToggleObject("sound", Textures.TEXTURE_TOGGLE_OFF, Textures.TEXTURE_TOGGLE_O
 ```
 
 Value: `boolean` via `getValue()` / `setValue()`. Full `applyData` / `collectData`.
+
+### StepperObject
+
+A value `1..count` picked with two arrows or by clicking a tick.
+
+```java
+new StepperObject("size", track, arrowLeft, arrowRight, tick, 0, 12, 91, 11, 5)
+        .setArrowBoxes(3, 3, 85, 3)
+        .setTickStrip(6, 3, 85, 5)
+        .setDefaultValue(1)
+        .setOnChanged(value -> refresh());
+```
+
+| Method | Default | Effect |
+|---|---|---|
+| `setArrowBoxes(leftX, leftY, rightX, rightY)` | `0, 0, 0, 0` | Arrow positions, relative to the object; size = the arrow texture's draw size |
+| `setTickStrip(startX, startY, endX, sizeY)` | `0, 0, 0, 0` | Tick area, relative to the object |
+| `setDefaultValue(int)` | `1` | Clamped to `1..count` |
+| `setSelectedTickTexture(Texture)` | none | Optional: drawn instead of the tick texture for the current value |
+| `setOnChanged(IntConsumer)` | none | Fires on user changes (arrows, ticks), only when the value actually changes |
+
+- Left arrow: `value - 1`, wrapping `1 → count`. Right arrow: `value + 1`, wrapping `count → 1`.
+- `seg = (endX - startX) / count`; tick `i` is drawn at `round(startX + seg * i + seg / 2 - 0.5)`, `startY`, at the tick texture's draw size. A click anywhere in segment `i` (height `sizeY`) sets `i + 1`.
+- Clicks outside the arrows and the strip are ignored (no sound, not consumed).
+- `getValue()` / `setValue(int)` (clamped, does **not** fire `onChanged`). `resetState()` → default; `applyData` / `collectData` as an `int` under its own id.
+- Inside a scrolling `BoxObject` picking goes through the box scroll offset like any other child. Label: the usual `setLabel(...)`.
 
 ### RadioButtonObject
 
@@ -819,7 +925,7 @@ Values live on the **object**, not the widget. That decides when they survive:
 
 `resetState()` runs from the `GuiRenderer` constructor — once per screen instance, not per `init()`. The game calls `init()` for both opening and resizing, so it can't tell them apart; the constructor can.
 
-Stateful: `ToggleObject` (boolean), `TextFieldObject`, `TextAreaObject`, `RadioButtonObject`, `DropdownObject` (String + scroll), `ScrollBarObject` (scroll), `ItemRenderObject` (stack), `ModelItemRenderObject` (stack).
+Stateful: `ToggleObject` (boolean), `StepperObject` (int), `TextFieldObject`, `TextAreaObject`, `RadioButtonObject`, `DropdownObject` (String + scroll), `ScrollBarObject` (scroll), `ItemRenderObject` (stack), `ModelItemRenderObject` (stack).
 
 A registered `Gui` is a **shared instance**. That's fine on a client with one screen at a time, but it is not re-entrant, and `setData` overwrites the previous opening's data.
 

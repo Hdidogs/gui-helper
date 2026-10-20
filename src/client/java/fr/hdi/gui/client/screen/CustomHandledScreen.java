@@ -115,6 +115,13 @@ public class CustomHandledScreen extends HandledScreen<CustomScreenHandler> {
     }
 
     @Override
+    public void removed() {
+        super.removed();
+
+        gui.fireClosed();
+    }
+
+    @Override
     public boolean shouldCloseOnEsc() {
         return gui.shouldCloseOnEsc();
     }

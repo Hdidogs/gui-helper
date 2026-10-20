@@ -1,6 +1,7 @@
 package fr.hdi.gui.client.gui.objects;
 
 import fr.hdi.gui.client.gui.utils.ObjectType;
+import fr.hdi.gui.utils.Anchor;
 import fr.hdi.gui.utils.GuiData;
 import fr.hdi.gui.utils.TextWithDetail;
 import fr.hdi.gui.utils.Texture;
@@ -30,6 +31,14 @@ public abstract class GuiObject {
     private int objectStartY;
     private int objectSizeX;
     private int objectSizeY;
+    private Anchor anchor = Anchor.TOP_LEFT;
+    private int fillX = -1;
+    private int fillY = -1;
+    private boolean anchored;
+    private int anchoredX;
+    private int anchoredY;
+    private int anchoredSizeX;
+    private int anchoredSizeY;
 
     public GuiObject(String id, ObjectType objectType, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY) {
         this.id = id;
@@ -141,19 +150,61 @@ public abstract class GuiObject {
     }
 
     public int getObjectStartX() {
-        return objectStartX;
+        return anchored ? anchoredX : objectStartX;
     }
 
     public int getObjectStartY() {
-        return objectStartY;
+        return anchored ? anchoredY : objectStartY;
     }
 
     public int getObjectSizeX() {
-        return objectSizeX;
+        return anchored ? anchoredSizeX : objectSizeX;
     }
 
     public int getObjectSizeY() {
-        return objectSizeY;
+        return anchored ? anchoredSizeY : objectSizeY;
+    }
+
+    public Anchor getAnchor() {
+        return anchor;
+    }
+
+    public GuiObject setAnchor(Anchor anchor) {
+        this.anchor = anchor == null ? Anchor.TOP_LEFT : anchor;
+
+        return this;
+    }
+
+    public GuiObject setFillX(int endMargin) {
+        this.fillX = Math.max(0, endMargin);
+
+        return this;
+    }
+
+    public GuiObject setFillY(int endMargin) {
+        this.fillY = Math.max(0, endMargin);
+
+        return this;
+    }
+
+    public boolean isAnchored() {
+        return anchored;
+    }
+
+    public int getAnchoredX() {
+        return getObjectStartX();
+    }
+
+    public int getAnchoredY() {
+        return getObjectStartY();
+    }
+
+    public void resolveAnchor(int containerSizeX, int containerSizeY) {
+        this.anchoredSizeX = fillX >= 0 ? Math.max(0, containerSizeX - objectStartX - fillX) : objectSizeX;
+        this.anchoredSizeY = fillY >= 0 ? Math.max(0, containerSizeY - objectStartY - fillY) : objectSizeY;
+        this.anchoredX = anchor.resolveX(containerSizeX, anchoredSizeX, objectStartX);
+        this.anchoredY = anchor.resolveY(containerSizeY, anchoredSizeY, objectStartY);
+        this.anchored = true;
     }
 
 }

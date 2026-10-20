@@ -4,6 +4,7 @@ import fr.hdi.gui.client.gui.objects.BoxObject;
 import fr.hdi.gui.client.gui.objects.GuiObject;
 import fr.hdi.gui.utils.GuiData;
 import fr.hdi.gui.utils.Texture;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -32,6 +33,8 @@ public class Gui {
     private boolean shouldCloseOnEsc;
     private boolean blur;
     private boolean darkBackground;
+    private boolean fullWindow;
+    private Runnable onClosed;
 
     public Gui() {
         title = Text.literal("");
@@ -189,11 +192,39 @@ public class Gui {
         return this;
     }
 
+    public boolean isFullWindow() {
+        return fullWindow;
+    }
+
+    public Gui setFullWindow(boolean fullWindow) {
+        this.fullWindow = fullWindow;
+
+        return this;
+    }
+
+    public Runnable getOnClosed() {
+        return onClosed;
+    }
+
+    public Gui setOnClosed(Runnable onClosed) {
+        this.onClosed = onClosed;
+
+        return this;
+    }
+
+    public void fireClosed() {
+        if (onClosed != null) onClosed.run();
+    }
+
     public int getSizeX() {
+        if (fullWindow) return (int) (MinecraftClient.getInstance().getWindow().getScaledWidth() / sizeMultiplicator);
+
         return sizeX > 0 ? sizeX : (hasBackground() ? background.getDrawSizeX() : 0);
     }
 
     public int getSizeY() {
+        if (fullWindow) return (int) (MinecraftClient.getInstance().getWindow().getScaledHeight() / sizeMultiplicator);
+
         return sizeY > 0 ? sizeY : (hasBackground() ? background.getDrawSizeY() : 0);
     }
 
