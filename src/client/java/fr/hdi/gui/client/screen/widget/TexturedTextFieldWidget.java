@@ -52,6 +52,14 @@ public class TexturedTextFieldWidget extends TextFieldWidget {
 
     @Override
     public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.active = guiObject.isEnabled();
+
+        if (!this.active && isFocused()) setFocused(false);
+
+        UtilsWidgets.renderState(context, guiObject, () -> draw(context, mouseX, mouseY, delta));
+    }
+
+    private void draw(DrawContext context, int mouseX, int mouseY, float delta) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getTextureX(), getTextureY());
 
         if (!this.isVisible()) return;

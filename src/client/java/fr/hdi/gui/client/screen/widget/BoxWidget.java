@@ -75,6 +75,14 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.active = guiObject.isEnabled();
+
+        if (!this.active) setFocused((Element) null);
+
+        UtilsWidgets.renderState(context, guiObject, () -> draw(context, mouseX, mouseY, delta));
+    }
+
+    private void draw(DrawContext context, int mouseX, int mouseY, float delta) {
         UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
@@ -105,6 +113,8 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
     @Override
     public boolean mouseClickedOverlay(double mouseX, double mouseY, int button) {
+        if (!active) return false;
+
         for (ClickableWidget widget : widgets) {
             if (!widget.visible || !(widget instanceof OverlayRenderer overlay)) continue;
 
@@ -146,7 +156,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (!isMouseOver(mouseX, mouseY)) return false;
+        if (!active || !isMouseOver(mouseX, mouseY)) return false;
 
         for (ClickableWidget widget : widgets) {
             if (widget.visible && widget.mouseScrolled(mouseX, mouseY + getScrollY(), horizontalAmount, verticalAmount)) return true;
@@ -195,6 +205,8 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (!active) return false;
+
         if (guiObject.hasScrollBar() && scrollBar.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
 
         return getFocused() != null && getFocused().mouseDragged(mouseX, mouseY + getScrollY(), button, deltaX, deltaY);

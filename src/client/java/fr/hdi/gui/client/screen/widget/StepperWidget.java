@@ -18,6 +18,12 @@ public class StepperWidget extends ClickableWidget {
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.active = guiObject.isEnabled();
+
+        UtilsWidgets.renderState(context, guiObject, () -> draw(context));
+    }
+
+    private void draw(DrawContext context) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
         UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());

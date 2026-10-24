@@ -30,6 +30,10 @@ public class ModelItemRenderWidget extends ClickableWidget {
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        UtilsWidgets.renderState(context, guiObject, () -> draw(context, mouseX, mouseY, delta));
+    }
+
+    private void draw(DrawContext context, int mouseX, int mouseY, float delta) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
         UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());

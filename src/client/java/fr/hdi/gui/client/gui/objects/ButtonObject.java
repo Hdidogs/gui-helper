@@ -7,8 +7,6 @@ import fr.hdi.gui.utils.Texture;
 import it.unimi.dsi.fastutil.floats.FloatConsumer;
 import net.minecraft.client.gui.widget.ClickableWidget;
 
-import java.util.function.BooleanSupplier;
-
 public class ButtonObject extends GuiObject {
     private boolean hoverAnimation = true;
     private Runnable onPress;
@@ -16,7 +14,6 @@ public class ButtonObject extends GuiObject {
     private int textStartY;
     private int textSizeX;
     private int textSizeY;
-    private BooleanSupplier enableWhen = () -> true;
     private FloatConsumer onHold;
     private Texture icon;
     private int iconSizeX;
@@ -86,16 +83,6 @@ public class ButtonObject extends GuiObject {
         this.icon = icon;
         this.iconSizeX = iconSizeX;
         this.iconSizeY = iconSizeY;
-
-        return this;
-    }
-
-    public boolean isEnabled() {
-        return enableWhen.getAsBoolean();
-    }
-
-    public ButtonObject setEnableWhen(BooleanSupplier enableWhen) {
-        this.enableWhen = enableWhen;
 
         return this;
     }

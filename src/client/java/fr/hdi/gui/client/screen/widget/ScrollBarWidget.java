@@ -71,15 +71,21 @@ public class ScrollBarWidget extends ClickableWidget {
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.active = guiObject.isEnabled();
+
+        if (!this.active) dragging = false;
+
         if (!isNeeded()) return;
 
-        UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
-        UtilsWidgets.drawTexture(context, guiObject.getSliderTexture(), getX(), getSliderY(), getWidth(), getSliderHeight());
+        UtilsWidgets.renderState(context, guiObject, () -> {
+            UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
+            UtilsWidgets.drawTexture(context, guiObject.getSliderTexture(), getX(), getSliderY(), getWidth(), getSliderHeight());
+        });
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!isNeeded() || !isMouseOver(mouseX, mouseY)) return false;
+        if (!this.active || !isNeeded() || !isMouseOver(mouseX, mouseY)) return false;
 
         dragging = true;
 

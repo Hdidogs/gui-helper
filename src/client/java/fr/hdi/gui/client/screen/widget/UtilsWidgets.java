@@ -47,6 +47,22 @@ public class UtilsWidgets {
     }
 
     private static final float MIN_TEXT_SCALE = 0.05F;
+    public static final float DISABLED_OPACITY = 0.5F;
+
+    private static float opacity = 1.0F;
+
+    public static void renderState(DrawContext context, GuiObject object, Runnable render) {
+        float previous = opacity;
+
+        opacity = object.isEnabled() ? previous : previous * DISABLED_OPACITY;
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, opacity);
+
+        render.run();
+
+        context.draw();
+        opacity = previous;
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, previous);
+    }
 
     public static void enableScissor(DrawContext context, int startX, int startY, int endX, int endY) {
         Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
@@ -60,11 +76,11 @@ public class UtilsWidgets {
         drawTexture(context, texture, x, y, sizeX, sizeY, 1.0F);
     }
 
-    public static void drawTexture(DrawContext context, Texture texture, int x, int y, int sizeX, int sizeY, float opacity) {
+    public static void drawTexture(DrawContext context, Texture texture, int x, int y, int sizeX, int sizeY, float alpha) {
         if (texture == null) return;
 
         RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, MathHelper.clamp(opacity, 0.0F, 1.0F));
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, MathHelper.clamp(alpha, 0.0F, 1.0F) * opacity);
 
         if (texture.isNineSlice()) {
             drawNineSlice(context, texture, x, y, sizeX, sizeY);
@@ -72,7 +88,7 @@ public class UtilsWidgets {
             drawRegion(context, texture, x, y, sizeX, sizeY, texture.getDrawStartX(), texture.getDrawStartY(), texture.getDrawSizeX(), texture.getDrawSizeY());
         }
 
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, opacity);
         RenderSystem.disableBlend();
     }
 

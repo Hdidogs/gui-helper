@@ -108,18 +108,23 @@ public class TexturedDropdownWidget extends ClickableWidget implements OverlayRe
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
+        this.active = guiObject.isEnabled();
 
-        context.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), guiObject.getBackgroundColor().getHexColor());
-        drawBorder(context, getX(), getY(), getWidth(), getHeight());
-        drawOptionText(context, guiObject.getSelectedOption(), getY(), getHeight());
-        drawArrow(context);
+        if (!this.active) open = false;
 
+        UtilsWidgets.renderState(context, guiObject, () -> {
+            if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
+
+            context.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), guiObject.getBackgroundColor().getHexColor());
+            drawBorder(context, getX(), getY(), getWidth(), getHeight());
+            drawOptionText(context, guiObject.getSelectedOption(), getY(), getHeight());
+            drawArrow(context);
+        });
     }
 
     @Override
     public boolean isCapturing() {
-        return open && visible;
+        return open && visible && active;
     }
 
     @Override

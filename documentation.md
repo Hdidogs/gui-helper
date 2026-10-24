@@ -155,6 +155,7 @@ Every object type extends `GuiObject` and shares:
 object.setLabel(new TextWithDetail(Text.literal("Name"), 0.5f));
 object.setTooltip(Text.literal("Line one"), Text.literal("Line two"));
 object.setShowWhen(toggle::getValue);
+object.setDisabledWhen(() -> !toggle.getValue());
 ```
 
 | Method | Notes |
@@ -164,8 +165,29 @@ object.setShowWhen(toggle::getValue);
 | `setTooltip(Text...)` | Varargs; multiple lines joined with `ScreenTexts.LINE_BREAK` |
 | `setShowWhen(BooleanSupplier)` | Re-evaluated **every frame**; keep it cheap |
 | `isShown()` | Evaluates the supplier |
+| `setDisabledWhen(BooleanSupplier)` | Default `() -> false`. Re-evaluated **every frame**. Disabled ⇒ 50% opacity (texture, text, label), input blocked |
+| `isDisabled()` / `isEnabled()` | Evaluate the supplier |
 | `getWidget()` | The live `ClickableWidget`, or `null` before `init()` |
 | `getObjectStartX/Y()`, `getObjectSizeX/Y()` | Position and size |
+
+### Disabled
+
+```java
+new ToggleObject(...).setDisabledWhen(() -> !master.getValue());
+```
+
+| Object | Disabled |
+|---|---|
+| Button | Dimmed, no hover lift, no press, hold stops |
+| Toggle, Radio, Stepper | Dimmed, clicks blocked |
+| TextField, TextArea | Dimmed, unfocused, typing / clicks / scroll blocked |
+| Dropdown | Dimmed, list closed, can't open |
+| ScrollBar | Dimmed, drag blocked |
+| Box | Dimmed with its children, clicks / scroll / drag blocked for all children |
+| EntityGuiObject | Dimmed, mouse-follow frozen |
+| Text, Texture, ItemRender, ModelItemRender | Dimmed only |
+
+Tooltips still show on a disabled object. `setDisabledWhen` returns `GuiObject` — call it last in a chain, like `setShowWhen`.
 
 ### Anchors and fill
 
@@ -399,19 +421,18 @@ Display-only: `active = false` and `isMouseOver` returns `false`, so it never ta
 ```java
 new ButtonObject("close", texture, new TextWithDetail(Text.literal("X"), 0.7f), 158, 5, 13, 13, this::close)
         .setHoverAnimation(true)
-        .setEnableWhen(toggle::getValue)
-        .setTextBox(2, 2, 84, 9);
+        .setTextBox(2, 2, 84, 9)
+        .setDisabledWhen(() -> !toggle.getValue());
 ```
 
 | Method | Default | Effect |
 |---|---|---|
 | `setHoverAnimation(boolean)` | `true` | 1px lift on hover |
-| `setEnableWhen(BooleanSupplier)` | always on | Disabled ⇒ 50% opacity on texture **and** text, no hover lift, clicks blocked |
 | `setTextBox(x, y, sizeX, sizeY)` | the object rect | Centre the text in this box instead of the whole button |
 | `setIcon(Texture, sizeX, sizeY)` | none | Icon stretched to `sizeX × sizeY`, centred, drawn over the texture |
 | `setOnHold(FloatConsumer)` | none | Fires every frame while held — see below |
 
-The icon follows the hover lift and the disabled opacity.
+The icon follows the hover lift and the disabled opacity. Disabled ⇒ no hover lift, no `onPress`, hold stops.
 
 **Hold.** After a left click on the button, `onHold.accept(delta)` fires every frame while the left mouse button stays down **and** the cursor is over the button (leaving pauses it, coming back resumes). `delta` is the render delta (`getLastFrameDuration()`, in ticks), so `yaw -= 6.0f * delta` is 120°/s. `onPress` still fires **once** on the click; passing `null` for `onPress` is allowed.
 
@@ -1061,7 +1082,13 @@ UtilsWidgets.drawLabel(context, guiObject, x, y);
 UtilsWidgets.drawItem(context, x, y, scale, item /* or ItemStack */);
 ```
 
-`drawTexture` handles nine-slice, opacity (via `RenderSystem.setShaderColor`, restored afterwards) and null textures. `enableScissor` transforms the rect through the current matrix before handing it to `DrawContext`, so it composes with the size multiplier and with any enclosing `BoxObject`.
+`drawTexture` handles nine-slice, opacity (via `RenderSystem.setShaderColor`, multiplied by the current `renderState` opacity and restored to it afterwards) and null textures.
+
+```java
+UtilsWidgets.renderState(context, guiObject, () -> draw(context));
+```
+
+`renderState` dims everything drawn inside it (textures, text, fills) to `DISABLED_OPACITY` when `guiObject.isDisabled()`; nested calls multiply. `ClickableWidget.render` is final, so every widget wraps its own `renderWidget` body. Interactive widgets also set `this.active = guiObject.isEnabled()` first. `enableScissor` transforms the rect through the current matrix before handing it to `DrawContext`, so it composes with the size multiplier and with any enclosing `BoxObject`.
 
 ---
 
@@ -1076,7 +1103,7 @@ itemRender.setShowWhen(toggle::getValue);
 **Disable a button until a choice is made**
 
 ```java
-button.setEnableWhen(() -> !dropdown.getValue().equals("none"));
+button.setDisabledWhen(() -> dropdown.getValue().equals("none"));
 ```
 
 **Submit and close**
@@ -1156,6 +1183,8 @@ gui.setFitToWindow(true).setFillRatio(0.8f).setMaxSizeMultiplicator(3.0f);
 
 | Symptom | Cause |
 |---|---|
+| `setEnableWhen` no longer exists | Replaced by `GuiObject.setDisabledWhen` with inverted logic: `setEnableWhen(x)` ⇒ `setDisabledWhen(() -> !x.getAsBoolean())` |
+| Disabled item looks fully opaque | Solid / cutout item models ignore the alpha modulator; only translucent parts fade |
 | Crash on a dedicated server | A `Gui`, `GuiObject` or widget referenced from `src/main` |
 | Client can't rebuild a handler | `GuiHandler` registered in `onInitializeClient` instead of `onInitialize` |
 | `Duplicate gui object id` | Two objects share an id — they must be unique per `Gui` |

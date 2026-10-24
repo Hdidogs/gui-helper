@@ -22,9 +22,13 @@ public class TexturedToggleWidget extends PressableWidget {
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
+        this.active = guiObject.isEnabled();
 
-        UtilsWidgets.drawTexture(context, guiObject.getValue() ? guiObject.getOnTexture() : guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
+        UtilsWidgets.renderState(context, guiObject, () -> {
+            if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
+
+            UtilsWidgets.drawTexture(context, guiObject.getValue() ? guiObject.getOnTexture() : guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
+        });
     }
 
     @Override

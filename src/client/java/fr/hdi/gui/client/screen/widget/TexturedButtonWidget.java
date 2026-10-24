@@ -12,8 +12,6 @@ import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class TexturedButtonWidget extends PressableWidget {
-    private static final float DISABLED_OPACITY = 0.5F;
-
     private ButtonObject guiObject;
     private boolean holding;
 
@@ -26,24 +24,29 @@ public class TexturedButtonWidget extends PressableWidget {
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
         this.active = guiObject.isEnabled();
 
+        UtilsWidgets.renderState(context, guiObject, () -> draw(context));
+
+        tickHold(delta);
+    }
+
+    private void draw(DrawContext context) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
         int offset = this.active && guiObject.hasHoverAnimation() && isHovered() ? -1 : 0;
         int dx = getX() + offset;
         int dy = getY() + offset;
 
-        UtilsWidgets.drawTexture(context, guiObject.getTexture(), dx, dy, getWidth(), getHeight(), this.active ? 1.0F : DISABLED_OPACITY);
+        UtilsWidgets.drawTexture(context, guiObject.getTexture(), dx, dy, getWidth(), getHeight());
 
         if (guiObject.getIcon() != null) {
             int ix = dx + (getWidth() - guiObject.getIconSizeX()) / 2;
             int iy = dy + (getHeight() - guiObject.getIconSizeY()) / 2;
 
-            UtilsWidgets.drawTexture(context, guiObject.getIcon(), ix, iy, guiObject.getIconSizeX(), guiObject.getIconSizeY(), this.active ? 1.0F : DISABLED_OPACITY);
+            UtilsWidgets.drawTexture(context, guiObject.getIcon(), ix, iy, guiObject.getIconSizeX(), guiObject.getIconSizeY());
         }
 
         if (guiObject.getText() != null && guiObject.getText().getText() != null) {
-            int textColor = this.active ? guiObject.getText().getColor().getHexColor()
-                    : guiObject.getText().getColor().withAlpha(DISABLED_OPACITY).getHexColor();
+            int textColor = guiObject.getText().getColor().getHexColor();
 
             float scale = UtilsWidgets.fitScale(guiObject.getText().getText(), guiObject.getText().getTextSize(), guiObject.getTextSizeX(), guiObject.getTextSizeY());
 
@@ -53,8 +56,6 @@ public class TexturedButtonWidget extends PressableWidget {
             context.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, guiObject.getText().getText(), 0, -4, textColor);
             context.getMatrices().pop();
         }
-
-        tickHold(delta);
     }
 
     private void tickHold(float delta) {

@@ -36,6 +36,10 @@ public class EntityWidget extends ClickableWidget {
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        UtilsWidgets.renderState(context, guiObject, () -> draw(context, mouseX, mouseY));
+    }
+
+    private void draw(DrawContext context, int mouseX, int mouseY) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
         UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
@@ -66,7 +70,7 @@ public class EntityWidget extends ClickableWidget {
     }
 
     private boolean isMouseDriven() {
-        return guiObject.isControlByMouse() && !guiObject.hasEntityYaw();
+        return guiObject.isControlByMouse() && !guiObject.hasEntityYaw() && guiObject.isEnabled();
     }
 
     private Quaternionf getSpinRotation() {

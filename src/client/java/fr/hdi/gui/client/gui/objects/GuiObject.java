@@ -22,6 +22,7 @@ public abstract class GuiObject {
     private String id;
     private TextWithDetail label;
     private BooleanSupplier showWhen = () -> true;
+    private BooleanSupplier disabledWhen = () -> false;
     private List<Text> tooltip;
     protected ClickableWidget widget;
     private ObjectType objectType;
@@ -129,6 +130,20 @@ public abstract class GuiObject {
 
     public GuiObject setShowWhen(BooleanSupplier showWhen) {
         this.showWhen = showWhen;
+
+        return this;
+    }
+
+    public boolean isDisabled() {
+        return disabledWhen.getAsBoolean();
+    }
+
+    public boolean isEnabled() {
+        return !isDisabled();
+    }
+
+    public GuiObject setDisabledWhen(BooleanSupplier disabledWhen) {
+        this.disabledWhen = disabledWhen;
 
         return this;
     }
