@@ -89,6 +89,7 @@ public class GuiHelperClient implements ClientModInitializer {
                     .setMaxVisibleOptions(3);
 
             dropdown.setLabel(new TextWithDetail(Text.literal("Difficulty"), 0.5f));
+            dropdown.setSearchable(true);
 
             TextureObject fittedTexture = new TextureObject("fit_on", Textures.TEXTURE_TOGGLE_ON, 112, 5, 24, 24).fitToSize();
             TextureObject stretchedTexture = new TextureObject("fit_off", Textures.TEXTURE_TOGGLE_ON, 112, 33, 24, 24);
