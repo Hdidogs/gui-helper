@@ -542,6 +542,30 @@ objectStart ┌────────────────────┐  
 
 Text is drawn at the box's top-left, not centred — `setDrawsBackground(false)` makes `TextFieldWidget` start at its own origin — so use `textStartY` to position it vertically. It **shrinks to fit** the box height (see below). Clicking anywhere on the **texture** still focuses the field; only the text is clipped to the box. Without `setTextBox(...)` (or with a zero size) the text box is the object rect, exactly as before. Call it before the GUI is opened — the box is read when the widget is built.
 
+### IntegerFieldObject, DecimalFieldObject, PercentFieldObject
+
+Text fields with validation. Same constructor as `TextFieldObject`; `setTextBox`, `setDefaultValue`, `setDisabledWhen` all apply.
+
+```java
+new IntegerFieldObject("count", texture, text, 5, 20, 40, 13, 6).setRange(-10, 64);
+new DecimalFieldObject("speed", texture, text, 5, 40, 40, 13, 8).setRange(0, 2.5);
+new PercentFieldObject("volume", texture, text, 5, 60, 40, 13, 5).setDefaultValue("65");
+```
+
+| Class | Accepts | Default range | Getter |
+|---|---|---|---|
+| `IntegerFieldObject` | `-?\d*` | `int` range | `getIntValue()` |
+| `DecimalFieldObject` | `-?\d*.?\d*`, `,` typed is stored as `.` | unbounded | `getNumber()` |
+| `PercentFieldObject` | as decimal, no `-` | `0`–`100`, `setRange` can only narrow it | `getNumber()` |
+
+- Invalid keystrokes and pastes are rejected (`TextFieldWidget.setTextPredicate`).
+- `-` is rejected when `min >= 0`. A positive value above `max` or a negative value below `min` is rejected while typing; anything else out of range (e.g. `3` with `min = 10`) is allowed while typing and **clamped on focus loss**.
+- On focus loss and in `collectData` / `applyData` the value is normalised: `"007"` ⇒ `"7"`, `"1.50"` ⇒ `"1.5"`, `"-"` / `"."` ⇒ `""`.
+- `getValue()` is still the `String`; an empty field reads as the clamped `0` through `getNumber()`.
+- `PercentFieldObject` draws `" %"` right after the number (`65 %`). The suffix is display-only — the value stays `"65"`, so `data.getFloat("volume", 0)` works server-side. Hidden while the field is empty; its width is reserved from the inner width so it never clips.
+
+Subclass hooks on `TextFieldObject` (all no-op by default): `accepts(String)`, `normalizeInput(String)`, `commit()`, `getSuffix()`.
+
 ### Fitting text to a box
 
 Both `ButtonObject` and `TextFieldObject` scale their text down to fit their text box:

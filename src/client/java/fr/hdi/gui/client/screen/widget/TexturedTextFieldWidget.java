@@ -1,12 +1,15 @@
 package fr.hdi.gui.client.screen.widget;
 
 import fr.hdi.gui.client.gui.objects.TextFieldObject;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
 public class TexturedTextFieldWidget extends TextFieldWidget {
+    private static final int SUFFIX_COLOR = 0xE0E0E0;
+
     private TextFieldObject guiObject;
 
     public TexturedTextFieldWidget(TextRenderer textRenderer, TextFieldObject guiObject, int bgX, int bgY, int maxLength) {
@@ -17,6 +20,36 @@ public class TexturedTextFieldWidget extends TextFieldWidget {
         this.setMaxLength(maxLength);
         this.setText(guiObject.getValue());
         this.setChangedListener(guiObject::setValue);
+        this.setTextPredicate(guiObject::accepts);
+    }
+
+    @Override
+    public void write(String text) {
+        super.write(guiObject.normalizeInput(text));
+    }
+
+    @Override
+    public void setFocused(boolean focused) {
+        if (!focused && isFocused()) {
+            guiObject.commit();
+
+            if (!getText().equals(guiObject.getValue())) setText(guiObject.getValue());
+        }
+
+        super.setFocused(focused);
+    }
+
+    private int getSuffixWidth() {
+        return guiObject.getSuffix() == null ? 0 : MinecraftClient.getInstance().textRenderer.getWidth(guiObject.getSuffix());
+    }
+
+    private void drawSuffix(DrawContext context) {
+        if (guiObject.getSuffix() == null || getText().isEmpty()) return;
+
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        int x = getX() + Math.min(textRenderer.getWidth(getText()), getInnerWidth());
+
+        context.drawTextWithShadow(textRenderer, guiObject.getSuffix(), x, getY(), SUFFIX_COLOR);
     }
 
     private float getTextScale() {
@@ -35,7 +68,7 @@ public class TexturedTextFieldWidget extends TextFieldWidget {
 
     @Override
     public int getInnerWidth() {
-        return (int) (super.getInnerWidth() / getTextScale());
+        return (int) (super.getInnerWidth() / getTextScale()) - getSuffixWidth();
     }
 
     @Override
@@ -74,6 +107,7 @@ public class TexturedTextFieldWidget extends TextFieldWidget {
         context.getMatrices().translate(-getX(), -getY(), 0.0F);
 
         super.renderWidget(context, mouseX, mouseY, delta);
+        drawSuffix(context);
 
         context.getMatrices().pop();
     }

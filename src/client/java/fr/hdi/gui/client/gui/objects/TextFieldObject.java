@@ -75,6 +75,21 @@ public class TextFieldObject extends GuiObject {
         return maxLength;
     }
 
+    public boolean accepts(String text) {
+        return true;
+    }
+
+    public String normalizeInput(String text) {
+        return text;
+    }
+
+    public void commit() {
+    }
+
+    public String getSuffix() {
+        return null;
+    }
+
     @Override
     public void resetState() {
         this.value = defaultValue;
