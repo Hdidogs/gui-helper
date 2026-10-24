@@ -6,9 +6,11 @@ import fr.hdi.gui.utils.Color;
 import fr.hdi.gui.utils.GuiData;
 import fr.hdi.gui.utils.TextWithDetail;
 import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class DropdownObject extends GuiObject {
     public static final Color DEFAULT_BACKGROUND = new Color("dropdown_background", 0x8B8B8B);
@@ -22,6 +24,9 @@ public class DropdownObject extends GuiObject {
     private int optionSizeY;
     private int maxVisibleOptions = 4;
     private double scrollY;
+    private boolean searchable;
+    private Text searchPlaceholder;
+    private String search = "";
     private String defaultValue;
     private String value;
 
@@ -42,9 +47,19 @@ public class DropdownObject extends GuiObject {
         return options;
     }
 
+    public List<DropdownOption> getFilteredOptions() {
+        if (search.isEmpty()) return options;
+
+        String query = search.toLowerCase(Locale.ROOT);
+
+        return options.stream().filter(option -> option.getSearchText().contains(query)).toList();
+    }
+
     public int getSelectedIndex() {
-        for (int index = 0; index < options.size(); index++) {
-            if (options.get(index).getValue().equals(value)) return index;
+        List<DropdownOption> filtered = getFilteredOptions();
+
+        for (int index = 0; index < filtered.size(); index++) {
+            if (filtered.get(index).getValue().equals(value)) return index;
         }
 
         return -1;
@@ -59,11 +74,43 @@ public class DropdownObject extends GuiObject {
     }
 
     public int getListSizeY() {
-        return Math.min(options.size(), maxVisibleOptions) * optionSizeY;
+        return Math.min(getFilteredOptions().size(), maxVisibleOptions) * optionSizeY;
     }
 
     public int getContentSizeY() {
-        return options.size() * optionSizeY;
+        return getFilteredOptions().size() * optionSizeY;
+    }
+
+    public int getSearchSizeY() {
+        return searchable ? optionSizeY : 0;
+    }
+
+    public boolean isSearchable() {
+        return searchable;
+    }
+
+    public DropdownObject setSearchable(boolean searchable) {
+        this.searchable = searchable;
+
+        return this;
+    }
+
+    public Text getSearchPlaceholder() {
+        return searchPlaceholder;
+    }
+
+    public DropdownObject setSearchPlaceholder(Text searchPlaceholder) {
+        this.searchPlaceholder = searchPlaceholder;
+
+        return this;
+    }
+
+    public String getSearch() {
+        return search;
+    }
+
+    public void setSearch(String search) {
+        this.search = search == null ? "" : search;
     }
 
     public int getMaxVisibleOptions() {
@@ -133,6 +180,7 @@ public class DropdownObject extends GuiObject {
     public void resetState() {
         this.value = defaultValue;
         this.scrollY = 0.0D;
+        this.search = "";
     }
 
     @Override
@@ -165,6 +213,12 @@ public class DropdownObject extends GuiObject {
 
         public TextWithDetail getLabel() {
             return label;
+        }
+
+        public String getSearchText() {
+            String text = label != null && label.getText() != null ? label.getText().getString() : value;
+
+            return text.toLowerCase(Locale.ROOT);
         }
     }
 }
