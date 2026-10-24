@@ -2,6 +2,7 @@ package fr.hdi.gui.client.screen.widget;
 
 import fr.hdi.gui.client.gui.objects.DropdownObject;
 import fr.hdi.gui.client.gui.objects.DropdownObject.DropdownOption;
+import fr.hdi.gui.utils.TextWithDetail;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -235,7 +236,7 @@ public class TexturedDropdownWidget extends ClickableWidget implements OverlayRe
         }
 
         if (isOverSearch(mouseX, mouseY)) {
-            searchField.mouseClicked(mouseX, mouseY, button);
+            searchField.mouseClicked(searchField.getX() + (mouseX - searchField.getX()) / getSearchScale(), searchField.getY(), button);
 
             return true;
         }
@@ -271,18 +272,48 @@ public class TexturedDropdownWidget extends ClickableWidget implements OverlayRe
         renderList(context, mouseX, mouseY, delta);
     }
 
-    private void renderSearch(DrawContext context, int mouseX, int mouseY, float delta) {
-        int searchY = getSearchY();
-        int searchSizeY = guiObject.getSearchSizeY();
+    private TextWithDetail getSearchStyle() {
+        for (DropdownOption option : guiObject.getOptions()) {
+            if (option.getLabel() != null) return option.getLabel();
+        }
+
+        return null;
+    }
+
+    private float getSearchScale() {
+        TextWithDetail style = getSearchStyle();
+
+        return style != null ? style.getTextSize() : 1.0F;
+    }
+
+    private void layoutSearch() {
+        float scale = getSearchScale();
+        TextWithDetail style = getSearchStyle();
 
         searchField.setX(getX() + TEXT_PADDING_X);
-        searchField.setY(searchY + (searchSizeY - searchField.getHeight()) / 2);
-        searchField.setWidth(Math.max(0, getWidth() - TEXT_PADDING_X * 2));
-        searchField.render(context, mouseX, mouseY, delta);
+        searchField.setY(getSearchY() + (guiObject.getSearchSizeY() - (int) (MinecraftClient.getInstance().textRenderer.fontHeight * scale)) / 2);
+        searchField.setWidth(Math.max(0, (int) ((getWidth() - TEXT_PADDING_X * 2) / scale)));
+
+        if (style != null) searchField.setEditableColor(style.getColor().getHexColor());
+    }
+
+    private void renderSearch(DrawContext context, int mouseX, int mouseY, float delta) {
+        float scale = getSearchScale();
+        int fieldX = searchField.getX();
+        int fieldY = searchField.getY();
+
+        context.getMatrices().push();
+        context.getMatrices().translate(fieldX, fieldY, 0.0F);
+        context.getMatrices().scale(scale, scale, 1.0F);
+        context.getMatrices().translate(-fieldX, -fieldY, 0.0F);
+
+        searchField.render(context, (int) (fieldX + (mouseX - fieldX) / scale), (int) (fieldY + (mouseY - fieldY) / scale), delta);
 
         if (guiObject.getSearchPlaceholder() != null && searchField.getText().isEmpty()) {
-            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, guiObject.getSearchPlaceholder(), searchField.getX() + CURSOR_SIZE_X, searchField.getY(), PLACEHOLDER_COLOR);
+            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, guiObject.getSearchPlaceholder(), fieldX + CURSOR_SIZE_X, fieldY, PLACEHOLDER_COLOR);
         }
+
+        context.getMatrices().pop();
 
         if (guiObject.getListSizeY() > 0) context.fill(getX(), getListY() - 1, getX() + getWidth(), getListY(), guiObject.getBorderColor().getHexColor());
     }
@@ -301,7 +332,10 @@ public class TexturedDropdownWidget extends ClickableWidget implements OverlayRe
 
         context.fill(getX(), overlayY, getX() + getWidth(), overlayY + overlaySizeY, guiObject.getBackgroundColor().getHexColor());
 
-        if (guiObject.isSearchable()) renderSearch(context, mouseX, mouseY, delta);
+        if (guiObject.isSearchable()) {
+            layoutSearch();
+            renderSearch(context, mouseX, mouseY, delta);
+        }
 
         if (listSizeY > 0) {
             Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
