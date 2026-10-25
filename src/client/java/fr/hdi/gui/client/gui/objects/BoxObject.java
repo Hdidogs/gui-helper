@@ -2,6 +2,7 @@ package fr.hdi.gui.client.gui.objects;
 
 import fr.hdi.gui.client.gui.utils.ObjectType;
 import fr.hdi.gui.client.screen.widget.BoxWidget;
+import fr.hdi.gui.screen.GuiHandler;
 import fr.hdi.gui.utils.Texture;
 import net.minecraft.client.gui.widget.ClickableWidget;
 
@@ -13,6 +14,7 @@ public class BoxObject extends GuiObject {
     private int scrollStep = 9;
     private ScrollBarObject scrollBar;
     private boolean scrollBarVisible = true;
+    private int scrollSnap = -1;
 
     public BoxObject(String id, Texture texture, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY) {
         super(id, ObjectType.BOX, texture, null, objectStartX, objectStartY, objectSizeX, objectSizeY);
@@ -69,6 +71,18 @@ public class BoxObject extends GuiObject {
 
     public BoxObject setScrollStep(int scrollStep) {
         this.scrollStep = scrollStep;
+
+        return this;
+    }
+
+    public int getScrollSnap() {
+        if (scrollSnap >= 0) return scrollSnap;
+
+        return objects.stream().anyMatch(object -> object instanceof SlotGridObject) ? GuiHandler.SLOT_SIZE : 0;
+    }
+
+    public BoxObject setScrollSnap(int scrollSnap) {
+        this.scrollSnap = Math.max(0, scrollSnap);
 
         return this;
     }

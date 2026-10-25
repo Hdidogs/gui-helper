@@ -13,6 +13,7 @@ import net.minecraft.util.Identifier;
 public class GuiSlot extends Slot {
     private final CustomScreenHandler handler;
     private final SlotObject object;
+    private boolean clientShown = true;
 
     public GuiSlot(CustomScreenHandler handler, SlotObject object, Inventory inventory) {
         super(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY());
@@ -24,19 +25,32 @@ public class GuiSlot extends Slot {
         return object;
     }
 
-    @Override
-    public boolean isEnabled() {
+    public void setClientShown(boolean clientShown) {
+        this.clientShown = clientShown;
+    }
+
+    public void setPosition(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private boolean isGroupActive() {
         return handler == null || handler.isGroupActive(object.getGroup());
     }
 
     @Override
+    public boolean isEnabled() {
+        return clientShown && isGroupActive();
+    }
+
+    @Override
     public boolean canInsert(ItemStack stack) {
-        return !object.isLocked() && isEnabled();
+        return !object.isLocked() && isGroupActive();
     }
 
     @Override
     public boolean canTakeItems(PlayerEntity player) {
-        return !object.isLocked() && isEnabled();
+        return !object.isLocked() && isGroupActive();
     }
 
     @Override

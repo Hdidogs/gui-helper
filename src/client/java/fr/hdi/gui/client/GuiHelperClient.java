@@ -161,12 +161,20 @@ public class GuiHelperClient implements ClientModInitializer {
         Gui gui = new Gui().setBackground(background).setDarkBackground(true).setFitToWindow(true).setFillRatio(0.8f);
 
         for (SlotObject slot : GuiHandlerRegistry.get(GuiHelper.id("debug_handler")).getSlots()) {
+            if ("storage".equals(slot.getGroup())) continue;
+
             gui.addObject(new TextureObject(slot.getId(), Textures.TEXTURE_SLOT, slot.getObjectStartX() - 1, slot.getObjectStartY() - 1)
                     .setShowWhen(() -> GuiPages.isActive(slot.getGroup())));
         }
 
-        gui.addObject(new ButtonObject("page_input", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.input"), 0.7f), 60, 4, 44, 13, () -> GuiPages.set("input")));
-        gui.addObject(new ButtonObject("page_trade", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.trade"), 0.7f), 106, 4, 44, 13, () -> GuiPages.set("trade")));
+        gui.addObject(new ButtonObject("page_input", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.input"), 0.7f), 60, 4, 36, 13, () -> GuiPages.set("input")));
+        gui.addObject(new ButtonObject("page_trade", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.trade"), 0.7f), 98, 4, 36, 13, () -> GuiPages.set("trade")));
+        gui.addObject(new ButtonObject("page_storage", buttonTexture, new TextWithDetail(Text.translatable("gui-helper.debug.page.storage"), 0.7f), 136, 4, 36, 13, () -> GuiPages.set("storage")));
+
+        gui.addObject(new BoxObject("storage_box", null, 111, 20, 60, 36)
+                .addObject(new SlotGridObject("storage", GuiHelper.id("debug_handler"), 0, 0))
+                .addObject(new TextObject("storage_end", new TextWithDetail(Text.literal("End of storage"), ColorHelper.WHITE, 0.5f), 0, 110))
+                .setShowWhen(() -> GuiPages.isActive("storage")));
 
         for (int index = 0; index < toggleIds.size(); index++) {
             gui.addObject(new ToggleObject(toggleIds.get(index), Textures.TEXTURE_TOGGLE_OFF, Textures.TEXTURE_TOGGLE_ON, 15, 20 + index * 20, 25, 13)

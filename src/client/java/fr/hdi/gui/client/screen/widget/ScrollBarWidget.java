@@ -1,5 +1,6 @@
 package fr.hdi.gui.client.screen.widget;
 
+import fr.hdi.gui.client.gui.objects.BoxObject;
 import fr.hdi.gui.client.gui.objects.ScrollBarObject;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
@@ -38,7 +39,10 @@ public class ScrollBarWidget extends ClickableWidget {
     }
 
     public void setScrollY(double scrollY) {
-        guiObject.setScrollY(MathHelper.clamp(scrollY, 0.0D, maxScrollY));
+        int snap = guiObject.getOwner() instanceof BoxObject box ? box.getScrollSnap() : 0;
+        double snapped = snap > 0 ? Math.round(scrollY / snap) * (double) snap : scrollY;
+
+        guiObject.setScrollY(MathHelper.clamp(snapped, 0.0D, maxScrollY));
     }
 
     public void setMaxScrollY(int maxScrollY) {

@@ -12,12 +12,17 @@ import net.minecraft.text.Text;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BoxWidget extends ContainerWidget implements OverlayRenderer {
+public class BoxWidget extends ContainerWidget implements OverlayRenderer, ViewportAware {
     private BoxObject guiObject;
     private List<GuiObject> objects = new ArrayList<>();
     private List<ClickableWidget> widgets = new ArrayList<>();
     private ScrollBarWidget scrollBar;
     private int contentHeight;
+    private double parentOffsetY;
+    private int clipStartX = Integer.MIN_VALUE;
+    private int clipStartY = Integer.MIN_VALUE;
+    private int clipEndX = Integer.MAX_VALUE;
+    private int clipEndY = Integer.MAX_VALUE;
 
     public BoxWidget(BoxObject object, int bgX, int bgY) {
         super(bgX + object.getObjectStartX(), bgY + object.getObjectStartY(), object.getObjectSizeX(), object.getObjectSizeY(), Text.empty());
@@ -56,6 +61,39 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
     }
 
     @Override
+    public void setViewport(double offsetY, int clipStartX, int clipStartY, int clipEndX, int clipEndY) {
+        this.parentOffsetY = offsetY;
+        this.clipStartX = clipStartX;
+        this.clipStartY = clipStartY;
+        this.clipEndX = clipEndX;
+        this.clipEndY = clipEndY;
+    }
+
+    @Override
+    public boolean isOverSlot(double mouseX, double mouseY) {
+        if (!visible || !isMouseOver(mouseX, mouseY)) return false;
+
+        for (ClickableWidget widget : widgets) {
+            if (widget.visible && widget instanceof ViewportAware viewport && viewport.isOverSlot(mouseX, mouseY + getScrollY())) return true;
+        }
+
+        return false;
+    }
+
+    private void updateViewports() {
+        int realY = (int) Math.round(getY() - parentOffsetY);
+        double offsetY = parentOffsetY + getScrollY();
+        int startX = Math.max(clipStartX, getX());
+        int startY = Math.max(clipStartY, realY);
+        int endX = Math.min(clipEndX, getX() + width);
+        int endY = Math.min(clipEndY, realY + height);
+
+        for (ClickableWidget widget : widgets) {
+            if (widget instanceof ViewportAware viewport) viewport.setViewport(offsetY, startX, startY, endX, endY);
+        }
+    }
+
+    @Override
     public List<? extends Element> children() {
         return widgets;
     }
@@ -85,6 +123,8 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
     private void draw(DrawContext context, int mouseX, int mouseY, float delta) {
         UtilsWidgets.drawTexture(context, guiObject.getTexture(), getX(), getY(), getWidth(), getHeight());
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
+
+        updateViewports();
 
         UtilsWidgets.enableScissor(context, getX(), getY(), getX() + width, getY() + height);
         context.getMatrices().push();
@@ -164,7 +204,9 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
         if (getMaxScrollY() <= 0) return false;
 
-        setScrollY(getScrollY() - verticalAmount * guiObject.getScrollStep());
+        int step = guiObject.getScrollSnap() > 0 ? guiObject.getScrollSnap() : guiObject.getScrollStep();
+
+        setScrollY(getScrollY() - verticalAmount * step);
 
         return true;
     }
@@ -189,7 +231,7 @@ public class BoxWidget extends ContainerWidget implements OverlayRenderer {
 
         setFocused((Element) null);
 
-        return true;
+        return !isOverSlot(mouseX, mouseY);
     }
 
     @Override

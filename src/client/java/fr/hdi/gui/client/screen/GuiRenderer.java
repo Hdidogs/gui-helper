@@ -1,12 +1,15 @@
 package fr.hdi.gui.client.screen;
 
 import fr.hdi.gui.client.gui.Gui;
+import fr.hdi.gui.client.gui.objects.BoxObject;
 import fr.hdi.gui.client.gui.objects.GuiObject;
 import fr.hdi.gui.client.screen.widget.OverlayRenderer;
+import fr.hdi.gui.client.screen.widget.SlotGridWidget;
 import fr.hdi.gui.client.screen.widget.UtilsWidgets;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ClickableWidget;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 public class GuiRenderer {
@@ -70,6 +73,18 @@ public class GuiRenderer {
     public void syncVisibility() {
         for (GuiObject object : gui.getObjects()) {
             if (object.getWidget() != null) object.getWidget().visible = object.isShown();
+        }
+    }
+
+    public void hideSlotGrids() {
+        hideSlotGrids(gui.getObjects());
+    }
+
+    private static void hideSlotGrids(List<GuiObject> objects) {
+        for (GuiObject object : objects) {
+            if (object.getWidget() instanceof SlotGridWidget grid) grid.hideSlots();
+
+            if (object instanceof BoxObject box) hideSlotGrids(box.getObjects());
         }
     }
 

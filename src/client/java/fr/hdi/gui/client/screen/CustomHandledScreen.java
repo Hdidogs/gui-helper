@@ -41,6 +41,7 @@ public class CustomHandledScreen extends HandledScreen<CustomScreenHandler> {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderer.syncVisibility();
+        renderer.hideSlotGrids();
         renderer.pushScale(context);
 
         super.render(context, renderer.scaled(mouseX), renderer.scaled(mouseY), delta);

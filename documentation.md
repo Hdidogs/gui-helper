@@ -59,7 +59,7 @@ This project uses split source sets. Getting this wrong is the most common cause
 
 | Source set | Package | May contain |
 |---|---|---|
-| `src/client` | `fr.hdi.gui.client.*` | `Gui`, all `GuiObject`s, all widgets, screens, `GuiRegistry` |
+| `src/client` | `fr.hdi.gui.client.*` | `Gui`, all `GuiObject`s (incl. `SlotGridObject`, the client proxy of a server grid), all widgets, screens, `GuiRegistry` |
 | `src/main` | `fr.hdi.gui.*` | `GuiHandler`, `SlotObject`, registries, networking, `Texture`, `Color`, `GuiData` |
 
 **`Gui` is client-only.** It holds `Texture`s and `Runnable` callbacks, which don't exist on a dedicated server. A slot layout, by contrast, must exist on **both** sides — which is why `GuiHandler` and `SlotObject` live in `src/main`.
@@ -624,6 +624,31 @@ Child coordinates are relative to the **box** origin. Content height is measured
 
 `getScrollBar()` lazily creates a default `ScrollBarObject` (`<boxId>_scroll_bar`); `setScrollBar(...)` replaces it. `setScrollStep(...)` sets the pixels moved per wheel notch (default `9`).
 
+`setScrollSnap(int)` rounds every scroll position (wheel, bar drag, focus scroll) to a multiple of the step; the wheel then moves one step per notch. Default: `18` (`GuiHandler.SLOT_SIZE`) when the box directly contains a `SlotGridObject`, otherwise `0` (off). The maximum scroll stays reachable even when it isn't a multiple.
+
+### SlotGridObject
+
+Client proxy for a **server slot grid**, so handler slots can live inside a `BoxObject`, scroll, and mix with any other `GuiObject`.
+
+```java
+// src/main — layout, the coordinates only define the grid's shape
+new GuiHandler().addSlotGrid("storage", 9, 0, 0, 3, 6).group("storage");
+
+// src/client
+new BoxObject("storage_box", null, 111, 20, 60, 36)
+        .addObject(new SlotGridObject("storage", GuiHelper.id("debug_handler"), 0, 0))
+        .addObject(new TextObject("storage_end", text, 0, 110));
+```
+
+- **id = the grid prefix.** It claims every server `SlotObject` whose id is `<id>_<digits>` — exactly what `addSlotGrid(id, ...)` produces. Unknown handler or no match ⇒ `IllegalArgumentException`.
+- **Position is client-side.** The grid keeps the server layout's shape (offsets from its top-left slot) and is placed at `objectStartX/Y`; the server's absolute coordinates are ignored. Object size = grid span, each cell `18 × 18`, item at `+1, +1`.
+- `setSlotTexture(Texture)` — cell background, default `Textures.TEXTURE_SLOT`, drawn only for shown cells.
+- **Only fully visible slots are shown.** A cell partly outside any enclosing box is hidden (not drawn, not clickable) — that's why the box snaps to rows by default. A hidden page (`group`), a hidden box or a hidden grid also hides the slots.
+- Inside a box, clicks over a shown slot fall through to `HandledScreen`, so pick-up, shift-click, drag-split and number keys work as with any slot. The wheel still scrolls the box.
+- Shift-click can still insert into scrolled-out slots, like the creative inventory.
+- `setDisabledWhen` only dims the cell backgrounds; it doesn't lock the slots — use `SlotObject.setLocked` server-side.
+- Only in a **handler** GUI (`CustomHandledScreen`); elsewhere it has no slots to place.
+
 ### ScrollBarObject
 
 Normally implicit. Customise it via `box.setScrollBar(...)`:
@@ -959,6 +984,12 @@ Every content slot is one class, `GuiSlot`, reading locking, grouping and the ba
 
 Handler slot indices are `0 .. contentSize-1` for content, then `contentSize .. +35` for the player inventory — which is exactly what `quickMove` uses for its `insertItem` ranges. `getContentSize()` is the **slot count**, not `getInventorySize()`; they differ if you map two slots to one inventory index.
 
+**Moving slots.** `Slot.x` / `Slot.y` are `final` in 1.20.6; `gui-helper.accesswidener` marks them `mutable` (declared in `build.gradle` → `loom.accessWidenerPath` and in `fabric.mod.json`). `GuiSlot.setPosition` writes them; only `SlotGridWidget` calls it, client-side, every frame.
+
+**Client visibility.** `GuiSlot.setClientShown(boolean)` feeds `isEnabled()` (draw, hover, click picking) but **not** `canInsert` / `canTakeItems`, which check the group only — client prediction must agree with the server, which never sets it. Each frame `CustomHandledScreen.render` first hides every grid's slots (`GuiRenderer.hideSlotGrids`), then each rendered `SlotGridWidget` re-shows its visible cells, so a grid that isn't rendered (hidden box, other page) leaves its slots hidden. `HandledScreen.render` draws slots **after** the widgets, so the positions written this frame are used this frame.
+
+**Viewports.** `BoxWidget` and `SlotGridWidget` implement `ViewportAware`: each frame a box passes its children the accumulated scroll offset and the intersection of every enclosing box's rect, in real screen-space coordinates. That's how a grid nested any depth knows where its cells really are. `isOverSlot` walks the same tree, and `BoxWidget.mouseClicked` returns `false` over a shown slot instead of consuming the click.
+
 `SlotObject`'s optional `backgroundSprite` goes through `GuiSlot.getBackgroundSprite()`, so the identifier must name a sprite stitched into the **block atlas** (e.g. `gui-helper:item/empty_slot` from `assets/gui-helper/textures/item/empty_slot.png`), not a loose `textures/gui/*.png`.
 
 ---
@@ -1211,6 +1242,8 @@ gui.setFitToWindow(true).setFillRatio(0.8f).setMaxSizeMultiplicator(3.0f);
 
 | Symptom | Cause |
 |---|---|
+| Slots in a box never appear | The `SlotGridObject` id must be the `addSlotGrid` prefix, and it only works in a handler GUI |
+| Bottom row of a slot box missing | The box height isn't a multiple of 18 (or the grid is offset) — partly visible rows are hidden |
 | `setEnableWhen` no longer exists | Replaced by `GuiObject.setDisabledWhen` with inverted logic: `setEnableWhen(x)` ⇒ `setDisabledWhen(() -> !x.getAsBoolean())` |
 | Disabled item looks fully opaque | Solid / cutout item models ignore the alpha modulator; only translucent parts fade |
 | Crash on a dedicated server | A `Gui`, `GuiObject` or widget referenced from `src/main` |

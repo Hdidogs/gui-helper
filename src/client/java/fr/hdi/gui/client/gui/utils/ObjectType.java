@@ -14,5 +14,6 @@ public enum ObjectType {
     RADIO_BUTTON,
     TEXTURE,
     ENTITY,
-    STEPPER
+    STEPPER,
+    SLOT_GRID
 }

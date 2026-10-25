@@ -18,6 +18,7 @@
 			"fr.hdi.gui.client.GuiHelperClient"
 		]
 	},
+	"accessWidener": "gui-helper.accesswidener",
 	"depends": {
 		"fabricloader": ">=0.18.4",
 		"minecraft": "~1.20.6",

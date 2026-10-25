@@ -50,6 +50,7 @@ public class GuiHelper implements ModInitializer {
                 .setTitle(Text.translatable("gui-helper.debug.handler.title"))
                 .addSlotGrid("input", 0, 111, 20, 3, 1).group("input")
                 .addSlotGrid("trade", 3, 111, 20, 3, 2).group("trade")
+                .addSlotGrid("storage", 9, 0, 0, 3, 6).group("storage")
                 .setDefaultGroup("input")
                 .setPlayerInventory(8, 83));
 
