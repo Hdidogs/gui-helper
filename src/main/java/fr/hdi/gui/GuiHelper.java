@@ -9,12 +9,9 @@ import fr.hdi.gui.screen.CustomScreenHandler;
 import fr.hdi.gui.screen.GuiHandler;
 import fr.hdi.gui.screen.GuiHandlerRegistry;
 import net.minecraft.text.Text;
-import fr.hdi.gui.screen.CustomScreenHandler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;

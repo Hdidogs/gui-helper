@@ -40,11 +40,15 @@ All extend `GuiObject`. Coordinates are relative to the GUI's top-left corner.
 | `ButtonObject` | Clickable, `Runnable onPress` | — |
 | `ToggleObject` | On/off, two textures | `boolean` |
 | `RadioButtonObject` | One group, exclusive options | `String` |
-| `DropdownObject` | Vector-drawn expanding list, scrolls past `maxVisibleOptions` | `String` |
+| `StepperObject` | Arrows and ticks to pick a step | `int` |
+| `DropdownObject` | Vector-drawn expanding list, wheel or draggable indicator, optional search | `String` |
 | `TextFieldObject` | Text input | `String` |
+| `IntegerFieldObject` / `DecimalFieldObject` | Validated numeric input, optional `setRange(min, max)` | `String` (`getIntValue()` / `getNumber()`) |
+| `PercentFieldObject` | Decimal `0`–`100`, drawn as `65 %` | `String` (`getNumber()`) |
 | `TextAreaObject` | Multi-line text input | `String` |
 | `BoxObject` | Container, clips and scrolls its children | — |
 | `ScrollBarObject` | Bar owned by a `BoxObject` | — |
+| `SlotGridObject` | Client proxy placing a server slot grid inside a `BoxObject` | — |
 
 ### Shared by every object
 
@@ -52,7 +56,18 @@ All extend `GuiObject`. Coordinates are relative to the GUI's top-left corner.
 object.setLabel(new TextWithDetail(Text.literal("Name"), 0.5f));   // drawn above, left-aligned
 object.setTooltip(Text.literal("Line one"), Text.literal("Line two"));
 object.setShowWhen(toggle::getValue);                              // re-evaluated every frame
+object.setDisabledWhen(() -> !toggle.getValue());                  // 50% opacity, input blocked
 ```
+
+`setShowWhen` / `setDisabledWhen` return `GuiObject`, so call them last in a chain.
+
+### Dropdown search
+
+```java
+dropdown.setSearchable(true).setSearchPlaceholder(Text.literal("Search..."));
+```
+
+A search row filters options by label (case-insensitive *contains*); Enter picks the first match. Cleared on close.
 
 ### Reading values
 
@@ -136,6 +151,18 @@ for (SlotObject slot : GuiHandlerRegistry.get(id).getSlots()) {
 }
 ```
 
+### Slots inside a box
+
+```java
+// common: the grid's coordinates only define its shape
+new GuiHandler().addSlotGrid("storage", 9, 0, 0, 3, 6);
+
+// client: id = the grid prefix
+box.addObject(new SlotGridObject("storage", GuiHelper.id("forge"), 0, 0));
+```
+
+The server keeps the slots and the sync; the client places them. Scrolling is smooth — partly visible slots are clipped and only their visible part takes hover and clicks (`HandledScreenMixin` + an access widener making `Slot.x/y` mutable). `box.setScrollSnap(18)` scrolls row by row instead.
+
 One `ExtendedScreenHandlerType<CustomScreenHandler, GuiOpenData>` carries the id and data in the vanilla open packet, so handlers can be registered at any time.
 
 ---
@@ -183,5 +210,8 @@ A `DropdownObject`'s open list floats above everything and takes input first —
 ## Known limits
 
 - A registered `Gui` is a shared instance — one screen at a time on the client, which is fine, but it is not re-entrant.
-- `SlotObject.backgroundSprite` goes through `TexturedSlot`, so the identifier must be a sprite stitched into the **block atlas**, not a loose `textures/gui/*.png`.
+- `SlotObject.backgroundSprite` goes through `GuiSlot`, so the identifier must be a sprite stitched into the **block atlas**, not a loose `textures/gui/*.png`.
+- Shift-click can insert into slots scrolled out of a box; `setDisabledWhen` on a `SlotGridObject` only dims it — lock slots server-side.
+- `SlotGridObject` only works in a handler GUI, and only claims slots named `<id>_<digits>`.
+- The dropdown search text uses the first labelled option's style and needs rows at least 9px tall.
 - `GuiObject` still carries `texture` / `text` / `onPress` fields that most subclasses leave null.
