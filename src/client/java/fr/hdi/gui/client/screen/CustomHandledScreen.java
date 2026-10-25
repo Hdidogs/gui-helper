@@ -2,11 +2,14 @@ package fr.hdi.gui.client.screen;
 
 import fr.hdi.gui.client.gui.Gui;
 import fr.hdi.gui.client.gui.GuiRegistry;
+import fr.hdi.gui.client.screen.widget.UtilsWidgets;
+import fr.hdi.gui.screen.utils.GuiSlot;
 import fr.hdi.gui.screen.CustomScreenHandler;
 import net.minecraft.client.gui.DrawContext;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
 public class CustomHandledScreen extends HandledScreen<CustomScreenHandler> {
@@ -56,6 +59,19 @@ public class CustomHandledScreen extends HandledScreen<CustomScreenHandler> {
     @Override
     protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
         renderer.drawBackground(context);
+    }
+
+    @Override
+    protected void drawSlot(DrawContext context, Slot slot) {
+        if (!(slot instanceof GuiSlot guiSlot) || !guiSlot.hasClientClip()) {
+            super.drawSlot(context, slot);
+
+            return;
+        }
+
+        UtilsWidgets.enableScissor(context, guiSlot.getClipStartX() - this.x, guiSlot.getClipStartY() - this.y, guiSlot.getClipEndX() - this.x, guiSlot.getClipEndY() - this.y);
+        super.drawSlot(context, slot);
+        context.disableScissor();
     }
 
     @Override

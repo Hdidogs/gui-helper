@@ -14,6 +14,11 @@ public class GuiSlot extends Slot {
     private final CustomScreenHandler handler;
     private final SlotObject object;
     private boolean clientShown = true;
+    private boolean clientClipped;
+    private int clipStartX;
+    private int clipStartY;
+    private int clipEndX;
+    private int clipEndY;
 
     public GuiSlot(CustomScreenHandler handler, SlotObject object, Inventory inventory) {
         super(inventory, object.getIndex(), object.getObjectStartX(), object.getObjectStartY());
@@ -27,6 +32,42 @@ public class GuiSlot extends Slot {
 
     public void setClientShown(boolean clientShown) {
         this.clientShown = clientShown;
+    }
+
+    public void setClientClip(int clipStartX, int clipStartY, int clipEndX, int clipEndY) {
+        this.clientClipped = true;
+        this.clipStartX = clipStartX;
+        this.clipStartY = clipStartY;
+        this.clipEndX = clipEndX;
+        this.clipEndY = clipEndY;
+    }
+
+    public void clearClientClip() {
+        this.clientClipped = false;
+    }
+
+    public boolean hasClientClip() {
+        return clientClipped;
+    }
+
+    public boolean isInClientClip(double pointX, double pointY) {
+        return !clientClipped || (pointX >= clipStartX && pointX < clipEndX && pointY >= clipStartY && pointY < clipEndY);
+    }
+
+    public int getClipStartX() {
+        return clipStartX;
+    }
+
+    public int getClipStartY() {
+        return clipStartY;
+    }
+
+    public int getClipEndX() {
+        return clipEndX;
+    }
+
+    public int getClipEndY() {
+        return clipEndY;
     }
 
     public void setPosition(int x, int y) {

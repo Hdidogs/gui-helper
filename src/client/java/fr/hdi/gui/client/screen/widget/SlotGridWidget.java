@@ -61,13 +61,21 @@ public class SlotGridWidget extends ClickableWidget implements ViewportAware {
         return (int) Math.round(getCellY(slot) - offsetY);
     }
 
+    private boolean isClipped() {
+        return clipStartX != Integer.MIN_VALUE;
+    }
+
     private boolean isCellShown(GuiSlot slot) {
         if (!GuiPages.isActive(slot.getObject().getGroup())) return false;
 
         int x = getCellX(slot);
         int y = getRealCellY(slot);
 
-        return x >= clipStartX && y >= clipStartY && x + GuiHandler.SLOT_SIZE <= clipEndX && y + GuiHandler.SLOT_SIZE <= clipEndY;
+        return x < clipEndX && y < clipEndY && x + GuiHandler.SLOT_SIZE > clipStartX && y + GuiHandler.SLOT_SIZE > clipStartY;
+    }
+
+    private boolean isInClip(double realX, double realY) {
+        return realX >= clipStartX && realX < clipEndX && realY >= clipStartY && realY < clipEndY;
     }
 
     @Override
@@ -78,7 +86,7 @@ public class SlotGridWidget extends ClickableWidget implements ViewportAware {
             int x = getCellX(slot);
             int y = getCellY(slot);
 
-            if (isCellShown(slot) && mouseX >= x && mouseX < x + GuiHandler.SLOT_SIZE && mouseY >= y && mouseY < y + GuiHandler.SLOT_SIZE) return true;
+            if (isCellShown(slot) && isInClip(mouseX, mouseY - offsetY) && mouseX >= x && mouseX < x + GuiHandler.SLOT_SIZE && mouseY >= y && mouseY < y + GuiHandler.SLOT_SIZE) return true;
         }
 
         return false;
@@ -112,6 +120,9 @@ public class SlotGridWidget extends ClickableWidget implements ViewportAware {
 
             slot.setClientShown(shown);
             slot.setPosition(cellX + 1 - guiX, getRealCellY(slot) + 1 - guiY);
+
+            if (isClipped()) slot.setClientClip(clipStartX, clipStartY, clipEndX, clipEndY);
+            else slot.clearClientClip();
 
             if (shown) UtilsWidgets.drawTexture(context, guiObject.getSlotTexture(), cellX, cellY, GuiHandler.SLOT_SIZE, GuiHandler.SLOT_SIZE);
         }
