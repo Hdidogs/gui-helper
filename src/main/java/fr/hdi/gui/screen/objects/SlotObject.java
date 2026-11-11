@@ -1,6 +1,11 @@
 package fr.hdi.gui.screen.objects;
 
+import fr.hdi.gui.screen.CustomScreenHandler;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
+
+import java.util.function.BiPredicate;
 
 public class SlotObject {
     private String id;
@@ -11,6 +16,9 @@ public class SlotObject {
     private boolean locked;
     private String group;
     private SlotClickHandler onClick;
+    private BiPredicate<CustomScreenHandler, ItemStack> canInsert;
+    private BiPredicate<CustomScreenHandler, PlayerEntity> canTakeItems;
+    private int maxCount;
 
     public SlotObject(String id, int index, int objectStartX, int objectStartY) {
         this(id, index, objectStartX, objectStartY, null);
@@ -84,5 +92,39 @@ public class SlotObject {
 
     public boolean hasOnClick() {
         return onClick != null;
+    }
+
+    public SlotObject setCanInsert(BiPredicate<CustomScreenHandler, ItemStack> canInsert) {
+        this.canInsert = canInsert;
+
+        return this;
+    }
+
+    public boolean canInsert(CustomScreenHandler handler, ItemStack stack) {
+        return canInsert == null || canInsert.test(handler, stack);
+    }
+
+    public SlotObject setCanTakeItems(BiPredicate<CustomScreenHandler, PlayerEntity> canTakeItems) {
+        this.canTakeItems = canTakeItems;
+
+        return this;
+    }
+
+    public boolean canTakeItems(CustomScreenHandler handler, PlayerEntity player) {
+        return canTakeItems == null || canTakeItems.test(handler, player);
+    }
+
+    public int getMaxCount() {
+        return maxCount;
+    }
+
+    public boolean hasMaxCount() {
+        return maxCount > 0;
+    }
+
+    public SlotObject setMaxCount(int maxCount) {
+        this.maxCount = Math.max(0, maxCount);
+
+        return this;
     }
 }

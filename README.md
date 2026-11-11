@@ -142,6 +142,8 @@ GuiRegistry.register(GuiHelper.id("forge"), buildForgeGui());
 GuiNetwork.openHandler(player, GuiHelper.id("forge"), data, inventory);
 ```
 
+Slots take `setLocked`, `setOnClick`, `setCanInsert((handler, stack) -> ...)`, `setCanTakeItems((handler, player) -> ...)` and `setMaxCount(n)`.
+
 `getInventorySize()` is derived from the highest slot index, so size is never declared twice. To decorate slots, read their positions back rather than repeating them:
 
 ```java

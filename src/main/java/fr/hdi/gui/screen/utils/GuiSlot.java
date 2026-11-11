@@ -86,12 +86,17 @@ public class GuiSlot extends Slot {
 
     @Override
     public boolean canInsert(ItemStack stack) {
-        return !object.isLocked() && isGroupActive();
+        return !object.isLocked() && isGroupActive() && object.canInsert(handler, stack);
     }
 
     @Override
     public boolean canTakeItems(PlayerEntity player) {
-        return !object.isLocked() && isGroupActive();
+        return !object.isLocked() && isGroupActive() && object.canTakeItems(handler, player);
+    }
+
+    @Override
+    public int getMaxItemCount() {
+        return object.hasMaxCount() ? Math.min(object.getMaxCount(), super.getMaxItemCount()) : super.getMaxItemCount();
     }
 
     @Override

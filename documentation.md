@@ -872,6 +872,25 @@ What a locked slot **displays** comes from the inventory passed to `GuiNetwork.o
 
 Locked slots still count in `getContentSize()` and `getInventorySize()`, so handler indices and the `quickMove` insert ranges never shift.
 
+### Filters and stack size
+
+```java
+new SlotObject("fuel", 0, 56, 53)
+        .setCanInsert((handler, stack) -> stack.isOf(Items.COAL))
+        .setCanTakeItems((handler, player) -> !handler.getData().getBoolean("burning", false))
+        .setMaxCount(16);
+```
+
+| Method | Default | Effect |
+|---|---|---|
+| `setCanInsert(BiPredicate<CustomScreenHandler, ItemStack>)` | accept all | Extra check on insert — click, drag-split, number keys, shift-click |
+| `setCanTakeItems(BiPredicate<CustomScreenHandler, PlayerEntity>)` | allow all | Extra check on take — click, `Q` throw, swap, shift-click out |
+| `setMaxCount(int)` | `0` (vanilla) | Caps the stack size: `min(maxCount, inventory max, item max)`, also respected by shift-click |
+
+- They **add** to `setLocked` and the group check, never override them: a locked slot or an inactive page still refuses everything.
+- The predicates run on **both sides** (client prediction and server), so keep them pure — read `handler.getData()` / `handler.getInventory()`, don't mutate state. `handler` is `null` only for the deprecated `LockedSlot` / `TexturedSlot` wrappers.
+- `setMaxCount` limits how much goes **into** the slot. It doesn't shrink a larger stack already in the inventory.
+
 ### Slot groups — pages inside one handler
 
 A tab editor wants 15 inventory slots on one tab and 36 trade slots on another, without reopening the screen. Slots are the sync protocol, so **every** slot stays registered with a stable index for the whole lifetime of the handler; a group is only activated or deactivated.
