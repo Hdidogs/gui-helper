@@ -95,6 +95,13 @@ public class GuiSlot extends Slot {
     }
 
     @Override
+    public void onTakeItem(PlayerEntity player, ItemStack stack) {
+        super.onTakeItem(player, stack);
+
+        if (object.hasOnTake() && !player.getWorld().isClient) object.getOnTake().onTake(handler, player, stack);
+    }
+
+    @Override
     public int getMaxItemCount() {
         return object.hasMaxCount() ? Math.min(object.getMaxCount(), super.getMaxItemCount()) : super.getMaxItemCount();
     }

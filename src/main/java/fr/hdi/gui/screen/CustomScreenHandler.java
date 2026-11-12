@@ -18,6 +18,9 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Identifier;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CustomScreenHandler extends ScreenHandler {
     public static final String GROUP_KEY = "gui.group";
 
@@ -27,6 +30,8 @@ public class CustomScreenHandler extends ScreenHandler {
     private GuiData data;
     private Inventory inventory;
     private String activeGroup;
+    private PlayerEntity player;
+    private List<ItemStack> contentSnapshot = new ArrayList<>();
 
     public static void register() {
         TYPE = Registry.register(Registries.SCREEN_HANDLER, GuiHelper.id("handler"),
@@ -49,6 +54,10 @@ public class CustomScreenHandler extends ScreenHandler {
         this.activeGroup = normalizeGroup(data.getString(GROUP_KEY, guiHandler.getDefaultGroup()));
 
         for (SlotObject slot : guiHandler.getSlots()) addSlot(new GuiSlot(this, slot, this.inventory));
+
+        this.player = playerInventory.player;
+
+        for (int index = 0; index < getContentSize(); index++) contentSnapshot.add(this.slots.get(index).getStack().copy());
 
         if (guiHandler.hasPlayerInventory()) addPlayerInventory(playerInventory, guiHandler.getPlayerInventoryX(), guiHandler.getPlayerInventoryY());
 
@@ -140,7 +149,30 @@ public class CustomScreenHandler extends ScreenHandler {
         if (slotStack.isEmpty()) slot.setStack(ItemStack.EMPTY);
         else slot.markDirty();
 
+        if (slotStack.getCount() == originalStack.getCount()) return ItemStack.EMPTY;
+
+        slot.onTakeItem(player, originalStack.copyWithCount(originalStack.getCount() - slotStack.getCount()));
+
         return originalStack;
+    }
+
+    @Override
+    public void sendContentUpdates() {
+        super.sendContentUpdates();
+
+        if (player.getWorld().isClient) return;
+
+        for (int index = 0; index < getContentSize(); index++) {
+            ItemStack stack = this.slots.get(index).getStack();
+
+            if (ItemStack.areEqual(stack, contentSnapshot.get(index))) continue;
+
+            contentSnapshot.set(index, stack.copy());
+
+            SlotObject object = getSlotObject(index);
+
+            if (object.hasOnContentChanged()) object.getOnContentChanged().onContentChanged(this, inventory);
+        }
     }
 
     @Override
@@ -151,6 +183,12 @@ public class CustomScreenHandler extends ScreenHandler {
     @Override
     public void onClosed(PlayerEntity player) {
         super.onClosed(player);
+
+        if (!player.getWorld().isClient) {
+            for (SlotObject object : guiHandler.getSlots()) {
+                if (object.hasOnClosed()) object.getOnClosed().onClosed(this, player);
+            }
+        }
 
         inventory.onClose(player);
     }

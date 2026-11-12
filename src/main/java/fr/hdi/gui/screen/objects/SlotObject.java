@@ -19,6 +19,9 @@ public class SlotObject {
     private BiPredicate<CustomScreenHandler, ItemStack> canInsert;
     private BiPredicate<CustomScreenHandler, PlayerEntity> canTakeItems;
     private int maxCount;
+    private SlotTakeHandler onTake;
+    private ContentChangedHandler onContentChanged;
+    private CloseHandler onClosed;
 
     public SlotObject(String id, int index, int objectStartX, int objectStartY) {
         this(id, index, objectStartX, objectStartY, null);
@@ -112,6 +115,48 @@ public class SlotObject {
 
     public boolean canTakeItems(CustomScreenHandler handler, PlayerEntity player) {
         return canTakeItems == null || canTakeItems.test(handler, player);
+    }
+
+    public SlotTakeHandler getOnTake() {
+        return onTake;
+    }
+
+    public SlotObject setOnTake(SlotTakeHandler onTake) {
+        this.onTake = onTake;
+
+        return this;
+    }
+
+    public boolean hasOnTake() {
+        return onTake != null;
+    }
+
+    public ContentChangedHandler getOnContentChanged() {
+        return onContentChanged;
+    }
+
+    public SlotObject setOnContentChanged(ContentChangedHandler onContentChanged) {
+        this.onContentChanged = onContentChanged;
+
+        return this;
+    }
+
+    public boolean hasOnContentChanged() {
+        return onContentChanged != null;
+    }
+
+    public CloseHandler getOnClosed() {
+        return onClosed;
+    }
+
+    public SlotObject setOnClosed(CloseHandler onClosed) {
+        this.onClosed = onClosed;
+
+        return this;
+    }
+
+    public boolean hasOnClosed() {
+        return onClosed != null;
     }
 
     public int getMaxCount() {

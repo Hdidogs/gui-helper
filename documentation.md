@@ -891,6 +891,26 @@ new SlotObject("fuel", 0, 56, 53)
 - The predicates run on **both sides** (client prediction and server), so keep them pure — read `handler.getData()` / `handler.getInventory()`, don't mutate state. `handler` is `null` only for the deprecated `LockedSlot` / `TexturedSlot` wrappers.
 - `setMaxCount` limits how much goes **into** the slot. It doesn't shrink a larger stack already in the inventory.
 
+### Slot callbacks
+
+```java
+new SlotObject("output", 9, 120, 35)
+        .setOnTake((handler, player, stack) -> player.addExperience(stack.getCount()))
+        .setOnContentChanged((handler, inventory) -> recomputeRecipe(handler, inventory))
+        .setOnClosed((handler, player) -> player.getInventory().offerOrDrop(handler.getInventory().removeStack(9)));
+```
+
+| Method | Interface | Fires |
+|---|---|---|
+| `setOnTake(SlotTakeHandler)` | `onTake(handler, player, stack)` | From `GuiSlot.onTakeItem`, after `super` — pick-up, `Q` throw, swap and shift-click out. `stack` is the amount taken (for shift-click: the amount actually moved) |
+| `setOnContentChanged(ContentChangedHandler)` | `onContentChanged(handler, inventory)` | When the slot's stack differs from last tick's (count or components) |
+| `setOnClosed(CloseHandler)` | `onClosed(handler, player)` | Once per slot when the handler closes, after the cursor stack is returned and before `inventory.onClose` |
+
+- **Server only**, like `setOnClick` — the client's prediction never fires them.
+- `onContentChanged` is a diff in `CustomScreenHandler.sendContentUpdates` (called every server tick and after each click), so it catches clicks, hoppers, other viewers and any `Inventory` type, **at most once per tick per slot**. Opening doesn't fire it — the snapshot is taken in the constructor. A change made inside the callback is seen on the next update and fires again, so guard against loops.
+- `onClosed` fires for every slot that has one, in slot order — register it on one slot if you need it once per GUI.
+- A slot with `setOnClick` skips default click handling, so clicks on it never reach `onTakeItem`; `onContentChanged` still fires.
+
 ### Slot groups — pages inside one handler
 
 A tab editor wants 15 inventory slots on one tab and 36 trade slots on another, without reopening the screen. Slots are the sync protocol, so **every** slot stays registered with a stable index for the whole lifetime of the handler; a group is only activated or deactivated.
