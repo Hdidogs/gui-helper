@@ -314,6 +314,23 @@ Draws the stack with its count overlay. `setShowItemTooltip(true)` shows the rea
 
 `applyData` reads the item id from its own key and the count from `<id>.count` (`ItemRenderObject.COUNT_SUFFIX`), ignoring unknown or malformed item ids. No `collectData`.
 
+Shared with `ModelItemRenderObject`:
+
+```java
+new ItemRenderObject("held", ItemStack.EMPTY, 40, 61, 1.0f)
+        .setStackSupplier(() -> MinecraftClient.getInstance().player.getMainHandStack())
+        .setItemScale(1.5f)
+        .setOffset(0.5f, -1.0f);
+```
+
+| Method | Default | Effect |
+|---|---|---|
+| `setStackSupplier(Supplier<ItemStack>)` | none | Read **every frame** by `getStack()` (draw, tooltip). While set it wins over `setStack`, the constructor stack and server data; `null` result ⇒ empty. `null` supplier ⇒ back to the stored stack |
+| `setItemScale(float)` | `1.0` | Multiplier like `EntityGuiObject.setEntityScale`; the object size doesn't change, the item stays **centered** on it. Here drawn size = `16 × scale × itemScale` |
+| `setOffset(float x, float y)` | `0, 0` | Pixel shift of the drawn item, sub-pixel allowed; the hitbox doesn't move |
+
+The item is now centered on the object box, so a constructor `scale` whose `16 × scale` isn't a whole number shifts by under a pixel compared to before.
+
 ### ModelItemRenderObject
 
 Renders an item's 3D model, spinning, with a fixed tilt. Use it for a showcase or reward slot where you want to see the item from more than one face.
@@ -332,6 +349,7 @@ new ModelItemRenderObject("trophy", null, stack, 8, 20, 40, 40, Direction.Axis.Z
 | `setTilt(x, y, z)` | `0, 0, 0` | Resting pose, in **degrees** |
 | `setTransformationMode(...)` | `ModelTransformationMode.FIXED` | Which vanilla item transform to use |
 | `setStack(ItemStack)` | constructor value | Swap the item |
+| `setStackSupplier`, `setItemScale`, `setOffset` | — | As on [`ItemRenderObject`](#itemrenderobject); `itemScale` multiplies the fit size |
 
 **`ItemRenderObject` already renders the 3D model** — `DrawContext.drawItem` goes through `ItemRenderer` with `ModelTransformationMode.GUI`, which is why a block looks like a cube there. What GUI mode locks is the *angle*. This object exists to free that up, not to add a renderer.
 
@@ -339,7 +357,7 @@ new ModelItemRenderObject("trophy", null, stack, 8, 20, 40, 40, Direction.Axis.Z
 
 **Tilt is applied after the spin**, so the item keeps its pose while turning around the chosen view axis — like a trophy on a turntable. Applying it the other way round would drag the spin axis along with the tilt.
 
-Scaling matches vanilla's `drawItem`: `translate(centre, 150)` then `scale(size, -size, size)` with `size = min(objectSizeX, objectSizeY) * 0.8`. Rendering is clipped to the object box, and depth lighting is left enabled — vanilla only disables it for flat models, and this is explicitly a 3D view.
+Scaling matches vanilla's `drawItem`: `translate(centre, 150)` then `scale(size, -size, size)` with `size = min(objectSizeX, objectSizeY) * 0.8 * itemScale`, centre shifted by the offset. Rendering is clipped to the object box, and depth lighting is left enabled — vanilla only disables it for flat models, and this is explicitly a 3D view.
 
 The `Texture` parameter is an optional frame drawn behind the item; pass `null` for none.
 

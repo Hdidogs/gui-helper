@@ -11,6 +11,8 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
 
+import java.util.function.Supplier;
+
 public class ModelItemRenderObject extends GuiObject {
     public static final String COUNT_SUFFIX = ".count";
 
@@ -22,6 +24,10 @@ public class ModelItemRenderObject extends GuiObject {
     private float tiltX;
     private float tiltY;
     private float tiltZ;
+    private Supplier<ItemStack> stackSupplier;
+    private float itemScale = 1.0F;
+    private float offsetX;
+    private float offsetY;
 
     public ModelItemRenderObject(String id, Texture texture, ItemStack stack, int objectStartX, int objectStartY, int objectSizeX, int objectSizeY) {
         this(id, texture, stack, objectStartX, objectStartY, objectSizeX, objectSizeY, Direction.Axis.Y, 1.0F);
@@ -36,11 +42,50 @@ public class ModelItemRenderObject extends GuiObject {
     }
 
     public ItemStack getStack() {
-        return stack;
+        if (stackSupplier == null) return stack;
+
+        ItemStack supplied = stackSupplier.get();
+
+        return supplied == null ? ItemStack.EMPTY : supplied;
     }
 
     public ModelItemRenderObject setStack(ItemStack stack) {
         this.stack = stack;
+
+        return this;
+    }
+
+    public boolean hasStackSupplier() {
+        return stackSupplier != null;
+    }
+
+    public ModelItemRenderObject setStackSupplier(Supplier<ItemStack> stackSupplier) {
+        this.stackSupplier = stackSupplier;
+
+        return this;
+    }
+
+    public float getItemScale() {
+        return itemScale;
+    }
+
+    public ModelItemRenderObject setItemScale(float itemScale) {
+        this.itemScale = Math.max(0.0F, itemScale);
+
+        return this;
+    }
+
+    public float getOffsetX() {
+        return offsetX;
+    }
+
+    public float getOffsetY() {
+        return offsetY;
+    }
+
+    public ModelItemRenderObject setOffset(float offsetX, float offsetY) {
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
 
         return this;
     }

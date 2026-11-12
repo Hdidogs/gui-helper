@@ -30,7 +30,11 @@ public class ItemRenderWidget extends ClickableWidget {
     private void draw(DrawContext context, int mouseX, int mouseY, float delta) {
         if (guiObject.hasLabel()) UtilsWidgets.drawLabel(context, guiObject, getX(), getY());
 
-        UtilsWidgets.drawItem(context, getX(), getY(), guiObject.getScale(), guiObject.getStack());
+        float scale = guiObject.getScale() * guiObject.getItemScale();
+        float itemX = getX() + (getWidth() - UtilsWidgets.ITEM_SIZE * scale) / 2.0F + guiObject.getOffsetX();
+        float itemY = getY() + (getHeight() - UtilsWidgets.ITEM_SIZE * scale) / 2.0F + guiObject.getOffsetY();
+
+        UtilsWidgets.drawItem(context, itemX, itemY, scale, guiObject.getStack());
 
         if (guiObject.isShowItemTooltip() && isHovered()) renderItemTooltip();
     }

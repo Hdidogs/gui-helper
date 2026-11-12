@@ -21,6 +21,7 @@ import org.joml.Vector4f;
 
 public class UtilsWidgets {
     public static final float SPIN_DEGREES_PER_SECOND = 45.0F;
+    public static final int ITEM_SIZE = 16;
 
     private static final float FULL_TURN = 360.0F;
     private static final float DEGREES = (float) Math.PI / 180.0F;
@@ -162,7 +163,7 @@ public class UtilsWidgets {
         context.getMatrices().pop();
     }
 
-    public static void drawItem(DrawContext context, int x, int y, float scale, ItemStack stack) {
+    public static void drawItem(DrawContext context, float x, float y, float scale, ItemStack stack) {
         if (stack.isEmpty()) return;
 
         context.getMatrices().push();

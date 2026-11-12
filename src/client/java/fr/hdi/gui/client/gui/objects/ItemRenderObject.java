@@ -9,6 +9,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
+import java.util.function.Supplier;
+
 public class ItemRenderObject extends GuiObject {
     public static final String COUNT_SUFFIX = ".count";
 
@@ -16,6 +18,10 @@ public class ItemRenderObject extends GuiObject {
     private ItemStack stack;
     private float scale;
     private boolean showItemTooltip;
+    private Supplier<ItemStack> stackSupplier;
+    private float itemScale = 1.0F;
+    private float offsetX;
+    private float offsetY;
 
     public ItemRenderObject(String id, Item item, int objectStartX, int objectStartY, float scale) {
         this(id, new ItemStack(item), objectStartX, objectStartY, scale);
@@ -29,7 +35,11 @@ public class ItemRenderObject extends GuiObject {
     }
 
     public ItemStack getStack() {
-        return stack;
+        if (stackSupplier == null) return stack;
+
+        ItemStack supplied = stackSupplier.get();
+
+        return supplied == null ? ItemStack.EMPTY : supplied;
     }
 
     public void setStack(ItemStack stack) {
@@ -37,11 +47,46 @@ public class ItemRenderObject extends GuiObject {
     }
 
     public Item getItem() {
-        return stack.getItem();
+        return getStack().getItem();
     }
 
     public float getScale() {
         return scale;
+    }
+
+    public boolean hasStackSupplier() {
+        return stackSupplier != null;
+    }
+
+    public ItemRenderObject setStackSupplier(Supplier<ItemStack> stackSupplier) {
+        this.stackSupplier = stackSupplier;
+
+        return this;
+    }
+
+    public float getItemScale() {
+        return itemScale;
+    }
+
+    public ItemRenderObject setItemScale(float itemScale) {
+        this.itemScale = Math.max(0.0F, itemScale);
+
+        return this;
+    }
+
+    public float getOffsetX() {
+        return offsetX;
+    }
+
+    public float getOffsetY() {
+        return offsetY;
+    }
+
+    public ItemRenderObject setOffset(float offsetX, float offsetY) {
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+
+        return this;
     }
 
     public boolean isShowItemTooltip() {

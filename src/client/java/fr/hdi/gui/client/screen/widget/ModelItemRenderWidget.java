@@ -40,12 +40,12 @@ public class ModelItemRenderWidget extends ClickableWidget {
 
         if (guiObject.getStack().isEmpty()) return;
 
-        float size = Math.min(getWidth(), getHeight()) * FIT_MARGIN;
+        float size = Math.min(getWidth(), getHeight()) * FIT_MARGIN * guiObject.getItemScale();
 
         UtilsWidgets.enableScissor(context, getX(), getY(), getX() + getWidth(), getY() + getHeight());
 
         context.getMatrices().push();
-        context.getMatrices().translate(getX() + getWidth() / 2.0F, getY() + getHeight() / 2.0F, DEPTH);
+        context.getMatrices().translate(getX() + getWidth() / 2.0F + guiObject.getOffsetX(), getY() + getHeight() / 2.0F + guiObject.getOffsetY(), DEPTH);
         context.getMatrices().scale(size, -size, size);
         context.getMatrices().multiply(new Quaternionf().rotationXYZ(guiObject.getTiltX() * DEGREES, guiObject.getTiltY() * DEGREES, guiObject.getTiltZ() * DEGREES));
         context.getMatrices().multiply(UtilsWidgets.spinRotation(guiObject.getSpinAxis(), guiObject.getSpinSpeed()));
