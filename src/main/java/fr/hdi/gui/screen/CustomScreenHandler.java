@@ -68,6 +68,10 @@ public class CustomScreenHandler extends ScreenHandler {
         return data;
     }
 
+    public PlayerEntity getPlayer() {
+        return player;
+    }
+
     public GuiHandler getGuiHandler() {
         return guiHandler;
     }
@@ -111,7 +115,7 @@ public class CustomScreenHandler extends ScreenHandler {
         }
 
         for (int column = 0; column < GuiHandler.PLAYER_INVENTORY_COLUMNS; column++) {
-            addSlot(new Slot(playerInventory, column, x + column * GuiHandler.SLOT_SIZE, y + GuiHandler.HOTBAR_OFFSET_Y));
+            addSlot(new Slot(playerInventory, column, x + column * GuiHandler.SLOT_SIZE, y + guiHandler.getHotbarOffsetY()));
         }
     }
 

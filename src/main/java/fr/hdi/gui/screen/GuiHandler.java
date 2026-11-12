@@ -22,6 +22,7 @@ public class GuiHandler {
     private boolean playerInventory;
     private int playerInventoryX;
     private int playerInventoryY;
+    private int hotbarOffsetY = HOTBAR_OFFSET_Y;
     private String defaultGroup;
     private int lastAddedIndex = -1;
 
@@ -109,9 +110,14 @@ public class GuiHandler {
     }
 
     public GuiHandler setPlayerInventory(int objectStartX, int objectStartY) {
+        return setPlayerInventory(objectStartX, objectStartY, HOTBAR_OFFSET_Y);
+    }
+
+    public GuiHandler setPlayerInventory(int objectStartX, int objectStartY, int hotbarOffsetY) {
         this.playerInventory = true;
         this.playerInventoryX = objectStartX;
         this.playerInventoryY = objectStartY;
+        this.hotbarOffsetY = hotbarOffsetY;
 
         return this;
     }
@@ -142,6 +148,10 @@ public class GuiHandler {
 
     public int getPlayerInventoryY() {
         return playerInventoryY;
+    }
+
+    public int getHotbarOffsetY() {
+        return hotbarOffsetY;
     }
 
     public Identifier getId() {

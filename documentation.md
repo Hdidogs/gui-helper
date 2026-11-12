@@ -823,6 +823,7 @@ GuiHandlerRegistry.register(GuiHelper.id("forge"), new GuiHandler()
 | `group(String)` | assigns a group to the slots the **previous** `addSlot` / `addSlotGrid` added |
 | `setDefaultGroup(String)` | the group active when the GUI opens |
 | `setPlayerInventory(x, y)` | 3×9 main + hotbar at `y + HOTBAR_OFFSET_Y` |
+| `setPlayerInventory(x, y, hotbarOffsetY)` | Same, hotbar at `y + hotbarOffsetY` (e.g. `54` for no gap, `76` for a wider one) |
 
 Constants: `SLOT_SIZE` 18, `PLAYER_INVENTORY_COLUMNS` 9, `PLAYER_INVENTORY_ROWS` 3, `PLAYER_INVENTORY_SIZE` 36, `HOTBAR_OFFSET_Y` 58.
 
@@ -844,7 +845,7 @@ public interface SlotClickHandler {
 }
 ```
 
-The callback receives the `CustomScreenHandler` because `SlotObject`s are registered once statically — per-opening context comes from `handler.getData()`, never from a field on the object.
+The callback receives the `CustomScreenHandler` because `SlotObject`s are registered once statically — per-opening context comes from `handler.getData()`, never from a field on the object. `handler.getPlayer()` is the player viewing it (the client player on the client side), useful in predicates that only receive the stack.
 
 Shop example — a row of locked, clickable offers:
 
